@@ -1,0 +1,970 @@
+#include "propertyeditor.h"
+#include "propertymodificationengine.h"
+#include "itemparser.h"
+#include "itemdatabase.h"
+#include "reversebitwriter.h"
+#include "enums.h"
+#include "helpers.h"
+
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QGridLayout>
+#include <QLabel>
+#include <QSpinBox>
+#include <QComboBox>
+#include <QPushButton>
+#include <QScrollArea>
+#include <QGroupBox>
+#include <QCheckBox>
+#include <QMessageBox>
+#include <QApplication>
+#include <QStyle>
+
+#ifndef QT_NO_DEBUG
+#include <QDebug>
+#endif
+
+PropertyEditor::PropertyEditor(QWidget *parent)
+    : QWidget(parent)
+    , _item(nullptr)
+    , _hasChanges(false)
+    , _updatingUI(false)
+{
+    setupUI();
+}
+
+PropertyEditor::~PropertyEditor()
+{
+    clear();
+}
+
+void PropertyEditor::setupUI()
+{
+    _mainLayout = new QVBoxLayout(this);
+    
+    // Header controls
+    QHBoxLayout *headerLayout = new QHBoxLayout;
+    
+    _showAllPropertiesCheck = new QCheckBox(tr("Show all properties"), this);
+    _showAllPropertiesCheck->setToolTip(tr("Show properties that are normally hidden in game"));
+    connect(_showAllPropertiesCheck, &QCheckBox::toggled, [this](bool) { 
+        if (!_updatingUI) populatePropertyCombo(nullptr);
+    });
+    
+    _statusLabel = new QLabel(this);
+    _statusLabel->setStyleSheet("QLabel { color: green; font-weight: bold; }");
+    
+    headerLayout->addWidget(_showAllPropertiesCheck);
+    headerLayout->addStretch();
+    headerLayout->addWidget(_statusLabel);
+    
+    _mainLayout->addLayout(headerLayout);
+    
+    // Scroll area for properties
+    _scrollArea = new QScrollArea(this);
+    _scrollArea->setWidgetResizable(true);
+    _scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    _scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    
+    _scrollWidget = new QWidget;
+    _scrollLayout = new QVBoxLayout(_scrollWidget);
+    _scrollLayout->setSpacing(5);
+    
+    _scrollArea->setWidget(_scrollWidget);
+    _mainLayout->addWidget(_scrollArea);
+    
+    // Control buttons
+    QHBoxLayout *buttonLayout = new QHBoxLayout;
+    
+    _addButton = new QPushButton(tr("Add Property"), this);
+    _addButton->setIcon(qApp->style()->standardIcon(QStyle::SP_FileIcon));
+    connect(_addButton, &QPushButton::clicked, this, &PropertyEditor::addProperty);
+    
+    _applyButton = new QPushButton(tr("Apply Changes"), this);
+    _applyButton->setIcon(qApp->style()->standardIcon(QStyle::SP_DialogApplyButton));
+    _applyButton->setEnabled(false);
+    connect(_applyButton, &QPushButton::clicked, this, &PropertyEditor::applyChanges);
+    
+    _revertButton = new QPushButton(tr("Revert Changes"), this);
+    _revertButton->setIcon(qApp->style()->standardIcon(QStyle::SP_DialogCancelButton));
+    _revertButton->setEnabled(false);
+    connect(_revertButton, &QPushButton::clicked, this, &PropertyEditor::revertChanges);
+    
+    buttonLayout->addWidget(_addButton);
+    buttonLayout->addStretch();
+    buttonLayout->addWidget(_applyButton);
+    buttonLayout->addWidget(_revertButton);
+    
+    _mainLayout->addLayout(buttonLayout);
+}
+
+void PropertyEditor::setItem(ItemInfo *item)
+{
+    if (_item == item) return;
+    
+    if (_hasChanges) {
+        int ret = QMessageBox::question(this, tr("Unsaved Changes"),
+                                       tr("You have unsaved changes. Do you want to apply them?"),
+                                       QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
+        if (ret == QMessageBox::Cancel) return;
+        if (ret == QMessageBox::Yes) applyChanges();
+    }
+    
+    clear();
+    _item = item;
+    
+    if (!_item) {
+        _addButton->setEnabled(false);
+        return;
+    }
+    
+    // Disable add button - only allow modifying existing properties for safety
+    _addButton->setEnabled(false);
+    backupOriginalProperties();
+    
+    // Populate existing properties
+    _updatingUI = true;
+    
+    // Add item properties (existing only)
+    for (auto it = _item->props.constBegin(); it != _item->props.constEnd(); ++it) {
+        int displayValue = getDisplayValueForProperty(it.key(), it.value());
+        addPropertyRow(it.key(), displayValue, it.value()->param, false);
+    }
+    
+    _updatingUI = false;
+    
+    _statusLabel->setText(tr("Loaded %1 existing properties (modify values only)").arg(_item->props.size()));
+}
+
+void PropertyEditor::clear()
+{
+    _updatingUI = true;
+    
+    // Remove all property rows
+    for (PropertyEditorRow *row : _propertyRows) {
+        delete row->propertyCombo;
+        delete row->valueSpinBox;
+        delete row->parameterSpinBox;
+        delete row->parameterLabel;
+        delete row->removeButton;
+        delete row->warningLabel;
+        delete row;
+    }
+    _propertyRows.clear();
+    
+    // Clear layouts
+    while (_scrollLayout->count() > 0) {
+        QLayoutItem *item = _scrollLayout->takeAt(0);
+        if (item->layout()) {
+            while (item->layout()->count() > 0) {
+                QLayoutItem *child = item->layout()->takeAt(0);
+                delete child->widget();
+                delete child;
+            }
+            delete item->layout();
+        }
+        delete item->widget();
+        delete item;
+    }
+    
+    _originalProperties.clear();
+    _originalRwProperties.clear();
+    _hasChanges = false;
+    _updatingUI = false;
+    
+    updateButtonStates();
+}
+
+void PropertyEditor::populatePropertyCombo(QComboBox *combo)
+{
+    if (!combo) {
+        // Update all combos
+        for (PropertyEditorRow *row : _propertyRows) {
+            populatePropertyCombo(row->propertyCombo);
+        }
+        return;
+    }
+    
+    int currentId = combo->currentData().toInt();
+    combo->clear();
+    
+    QHash<uint, ItemPropertyTxt *> *allProperties = ItemDataBase::Properties();
+    
+    for (auto it = allProperties->constBegin(); it != allProperties->constEnd(); ++it) {
+        ItemPropertyTxt *propTxt = it.value();
+        if (!propTxt) continue;
+        
+        // Skip hidden properties unless show all is checked
+        if (!_showAllPropertiesCheck->isChecked()) {
+            if (propTxt->descPositive.isEmpty() && propTxt->descNegative.isEmpty()) {
+                continue;
+            }
+        }
+        
+        QString displayName = getPropertyDisplayName(it.key());
+        combo->addItem(displayName, it.key());
+    }
+    
+    // Restore selection
+    if (currentId > 0) {
+        int index = combo->findData(currentId);
+        if (index >= 0) {
+            combo->setCurrentIndex(index);
+        }
+    }
+}
+
+void PropertyEditor::addProperty()
+{
+    // Add empty property row
+    addPropertyRow();
+}
+
+void PropertyEditor::addPropertyRow(int propertyId, int value, quint32 parameter, bool isNew)
+{
+    PropertyEditorRow *row = new PropertyEditorRow;
+    row->isNew = isNew;
+    row->originalPropertyId = propertyId;
+    row->originalValue = value;
+    row->originalParameter = parameter;
+    
+    // Create layout for this row
+    QHBoxLayout *rowLayout = new QHBoxLayout;
+    QWidget *rowWidget = new QWidget;
+    rowWidget->setLayout(rowLayout);
+    
+    // Property selection combo
+    row->propertyCombo = new QComboBox;
+    row->propertyCombo->setMinimumWidth(200);
+    populatePropertyCombo(row->propertyCombo);
+    
+    if (propertyId > 0) {
+        int index = row->propertyCombo->findData(propertyId);
+        if (index >= 0) row->propertyCombo->setCurrentIndex(index);
+        
+        // Disable combo for existing properties - only allow value changes
+        if (!isNew) {
+            row->propertyCombo->setEnabled(false);
+        }
+    }
+    
+    connect(row->propertyCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            [this, row]() { 
+                if (!_updatingUI) {
+                    updatePropertyRow(row);
+                    onPropertyChanged();
+                }
+            });
+    
+    // Value spin box
+    row->valueSpinBox = new QSpinBox;
+    row->valueSpinBox->setRange(-2147483648, 2147483647);
+    row->valueSpinBox->setValue(value);
+    row->valueSpinBox->setMinimumWidth(100);
+    row->valueSpinBox->setToolTip(tr("Property value. Range will be automatically limited based on property type to prevent overflow."));
+    
+    connect(row->valueSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
+            [this]() { 
+                if (!_updatingUI) onValueChanged();
+            });
+    
+    // Parameter label and spin box
+    row->parameterLabel = new QLabel(tr("Param:"));
+    row->parameterSpinBox = new QSpinBox;
+    row->parameterSpinBox->setRange(0, 65535);
+    row->parameterSpinBox->setValue(parameter);
+    row->parameterSpinBox->setMinimumWidth(80);
+    row->parameterSpinBox->setToolTip(tr("Property parameter. Range limited to prevent overflow based on property definition."));
+    
+    connect(row->parameterSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
+            [this]() { 
+                if (!_updatingUI) onParameterChanged();
+            });
+    
+    // Remove button
+    row->removeButton = new QPushButton;
+    row->removeButton->setIcon(qApp->style()->standardIcon(QStyle::SP_TrashIcon));
+    row->removeButton->setToolTip(tr("Remove Property"));
+    row->removeButton->setMaximumWidth(30);
+    
+    connect(row->removeButton, &QPushButton::clicked, 
+            [this, row]() { removePropertyRow(row); });
+    
+    // Warning label
+    row->warningLabel = new QLabel;
+    row->warningLabel->setStyleSheet("QLabel { color: red; font-weight: bold; }");
+    row->warningLabel->hide();
+    
+    // Add to layout
+    rowLayout->addWidget(new QLabel(tr("Property:")));
+    rowLayout->addWidget(row->propertyCombo, 1);
+    rowLayout->addWidget(new QLabel(tr("Value:")));
+    rowLayout->addWidget(row->valueSpinBox);
+    rowLayout->addWidget(row->parameterLabel);
+    rowLayout->addWidget(row->parameterSpinBox);
+    rowLayout->addWidget(row->removeButton);
+    rowLayout->addWidget(row->warningLabel);
+    
+    _scrollLayout->addWidget(rowWidget);
+    
+    _propertyRows.append(row);
+    
+    // Update the row based on selected property
+    updatePropertyRow(row);
+    
+    if (isNew && !_updatingUI) {
+        onPropertyChanged();
+    }
+}
+
+void PropertyEditor::removePropertyRow(PropertyEditorRow *row)
+{
+    int index = _propertyRows.indexOf(row);
+    if (index < 0) return;
+    
+    // Find and remove the widget from scroll layout
+    QWidget *rowWidget = nullptr;
+    for (int i = 0; i < _scrollLayout->count(); ++i) {
+        QLayoutItem *item = _scrollLayout->itemAt(i);
+        if (item && item->widget()) {
+            QHBoxLayout *rowLayout = qobject_cast<QHBoxLayout*>(item->widget()->layout());
+            if (rowLayout) {
+                // Check if this layout contains our combo box
+                for (int j = 0; j < rowLayout->count(); ++j) {
+                    if (rowLayout->itemAt(j)->widget() == row->propertyCombo) {
+                        rowWidget = item->widget();
+                        break;
+                    }
+                }
+            }
+        }
+        if (rowWidget) break;
+    }
+    
+    _propertyRows.removeAt(index);
+    
+    // Clean up
+    delete row->propertyCombo;
+    delete row->valueSpinBox;
+    delete row->parameterSpinBox;
+    delete row->parameterLabel;
+    delete row->removeButton;
+    delete row->warningLabel;
+    delete row;
+    
+    if (rowWidget) {
+        delete rowWidget;
+    }
+    
+    onPropertyChanged();
+}
+
+void PropertyEditor::updatePropertyRow(PropertyEditorRow *row)
+{
+    if (_updatingUI) return;
+    
+    _updatingUI = true;
+    
+    int propertyId = row->propertyCombo->currentData().toInt();
+    if (propertyId <= 0) {
+        row->parameterLabel->setVisible(false);
+        row->parameterSpinBox->setVisible(false);
+        _updatingUI = false;
+        return;
+    }
+    
+    ItemPropertyTxt *propTxt = ItemDataBase::Properties()->value(propertyId);
+    if (!propTxt) {
+        _updatingUI = false;
+        return;
+    }
+    
+    // Update parameter visibility
+    bool hasParam = propTxt->paramBits > 0;
+    row->parameterLabel->setVisible(hasParam);
+    row->parameterSpinBox->setVisible(hasParam);
+    
+    // Update value range - use safe range to prevent overflow
+    QPair<int, int> valueRange = getSafeValueRange(propertyId);
+    row->valueSpinBox->setRange(valueRange.first, valueRange.second);
+    
+    // Update tooltip with specific range information
+    QString valueTooltip = tr("Property value range: %1 to %2\nSafe range applied to prevent overflow and game corruption.")
+                          .arg(valueRange.first).arg(valueRange.second);
+    row->valueSpinBox->setToolTip(valueTooltip);
+    
+    // Update parameter range
+    if (hasParam) {
+        QPair<quint32, quint32> paramRange = getParameterRange(propertyId);
+        row->parameterSpinBox->setRange(paramRange.first, paramRange.second);
+        
+        QString paramTooltip = tr("Parameter range: %1 to %2\nUsed for skill IDs, class restrictions, etc.")
+                              .arg(paramRange.first).arg(paramRange.second);
+        row->parameterSpinBox->setToolTip(paramTooltip);
+    }
+    
+    // Validate current values
+    validatePropertyValue(row);
+    
+    _updatingUI = false;
+}
+
+void PropertyEditor::validatePropertyValue(PropertyEditorRow *row)
+{
+    row->warningLabel->hide();
+    
+    int propertyId = row->propertyCombo->currentData().toInt();
+    if (propertyId <= 0) return;
+    
+    ItemPropertyTxt *propTxt = ItemDataBase::Properties()->value(propertyId);
+    if (!propTxt) return;
+    
+    // Check for duplicate properties
+    int count = 0;
+    for (const PropertyEditorRow *otherRow : _propertyRows) {
+        if (otherRow->propertyCombo->currentData().toInt() == propertyId) {
+            count++;
+        }
+    }
+    
+    if (count > 1) {
+        row->warningLabel->setText(tr("Duplicate!"));
+        row->warningLabel->show();
+        return;
+    }
+    
+    // Get current values
+    int value = row->valueSpinBox->value();
+    quint32 parameter = row->parameterSpinBox->value();
+    
+    // Validate overflow protection first (most critical)
+    if (!validateValueOverflow(propertyId, value)) {
+        row->warningLabel->setText(tr("Value overflow risk! Use safer range"));
+        row->warningLabel->show();
+        return;
+    }
+    
+    if (!validateParameterOverflow(propertyId, parameter)) {
+        row->warningLabel->setText(tr("Parameter overflow risk!"));
+        row->warningLabel->show();
+        return;
+    }
+    
+    // Get correct value range using the same logic as PropertyModificationEngine
+    QPair<int, int> range = getValueRange(propertyId);
+    int minValue = range.first;
+    int maxValue = range.second;
+    
+    // Validate value is within allowed range
+    if (value < minValue || value > maxValue) {
+        QString warningText;
+        if (minValue >= 0) {
+            warningText = tr("Range: %1-%2").arg(minValue).arg(maxValue);
+        } else {
+            warningText = tr("Range: %1 to +%2").arg(minValue).arg(maxValue);
+        }
+        row->warningLabel->setText(warningText);
+        row->warningLabel->show();
+        return;
+    }
+    
+    // Parameter validation if applicable
+    if (propTxt->paramBits > 0) {
+        QPair<quint32, quint32> paramRange = getParameterRange(propertyId);
+        if (parameter > paramRange.second) {
+            row->warningLabel->setText(tr("Parameter: 0-%1").arg(paramRange.second));
+            row->warningLabel->show();
+            return;
+        }
+    }
+    
+    // Special validation for specific properties
+    switch (propertyId) {
+        case Enums::ItemProperties::Defence:
+            if (value < 0) {
+                row->warningLabel->setText(tr("Defense cannot be negative"));
+                row->warningLabel->show();
+            }
+            break;
+        case Enums::ItemProperties::MaximumDamage:
+        case Enums::ItemProperties::MaximumDamageSecondary:
+        case Enums::ItemProperties::MaximumDamageFire:
+        case Enums::ItemProperties::MaximumDamageLightning:
+        case Enums::ItemProperties::MaximumDamageMagic:
+        case Enums::ItemProperties::MaximumDamageCold:
+        case Enums::ItemProperties::MaximumDamagePoison:
+            // Check if max damage is less than min damage for same type
+            if (value <= 0) {
+                row->warningLabel->setText(tr("Maximum damage must be positive"));
+                row->warningLabel->show();
+            }
+            break;
+        case Enums::ItemProperties::Strength:
+        case Enums::ItemProperties::Dexterity:
+        case Enums::ItemProperties::Vitality:
+        case Enums::ItemProperties::Energy:
+            if (qAbs(value) > 1000) {
+                row->warningLabel->setText(tr("Extreme stat values may cause issues"));
+                row->warningLabel->show();
+            }
+            break;
+        default:
+            break;
+    }
+}
+
+QString PropertyEditor::getPropertyDisplayName(int propertyId) const
+{
+    ItemPropertyTxt *propTxt = ItemDataBase::Properties()->value(propertyId);
+    if (!propTxt) return tr("Unknown Property (%1)").arg(propertyId);
+    
+    QString name;
+    if (!propTxt->descPositive.isEmpty()) {
+        name = propTxt->descPositive;
+    } else if (!propTxt->descNegative.isEmpty()) {
+        name = propTxt->descNegative;
+    } else if (!propTxt->stat.isEmpty()) {
+        name = QString::fromUtf8(propTxt->stat);
+    } else {
+        name = tr("Property %1").arg(propertyId);
+    }
+    
+    return QString("%1 (%2)").arg(name).arg(propertyId);
+}
+
+QPair<int, int> PropertyEditor::getValueRange(int propertyId) const
+{
+    ItemPropertyTxt *propTxt = ItemDataBase::Properties()->value(propertyId);
+    if (!propTxt) return QPair<int, int>(-32768, 32767);
+    
+    // Calculate correct range based on bit storage format
+    // This matches the logic in PropertyModificationEngine
+    // Add safety check to prevent bit overflow
+    int bits = qMin(31, (int)propTxt->bits); // Limit to 31 bits to prevent signed overflow
+    int maxValue = (1 << bits) - 1 - propTxt->add;
+    int minValue = -propTxt->add;
+    
+    // Special cases that override the general calculation
+    switch (propertyId) {
+        case Enums::ItemProperties::EnhancedDamage:
+            return QPair<int, int>(0, 32767);
+        case Enums::ItemProperties::Defence:
+            return QPair<int, int>(0, 65535);
+            
+        // Damage properties - cannot be negative
+        case Enums::ItemProperties::MinimumDamage:
+        case Enums::ItemProperties::MaximumDamage:
+        case Enums::ItemProperties::MinimumDamageSecondary:
+        case Enums::ItemProperties::MaximumDamageSecondary:
+        case Enums::ItemProperties::MinimumDamageFire:
+        case Enums::ItemProperties::MaximumDamageFire:
+        case Enums::ItemProperties::MinimumDamageLightning:
+        case Enums::ItemProperties::MaximumDamageLightning:
+        case Enums::ItemProperties::MinimumDamageMagic:
+        case Enums::ItemProperties::MaximumDamageMagic:
+        case Enums::ItemProperties::MinimumDamageCold:
+        case Enums::ItemProperties::MaximumDamageCold:
+        case Enums::ItemProperties::MinimumDamagePoison:
+        case Enums::ItemProperties::MaximumDamagePoison:
+            return QPair<int, int>(qMax(0, minValue), maxValue);
+            
+        // Life, Mana, Stamina - can be negative (penalties)
+        case Enums::ItemProperties::Life:
+        case Enums::ItemProperties::Mana:
+        case Enums::ItemProperties::Stamina:
+        // Stats - can be negative (curses, debuffs)
+        case Enums::ItemProperties::Strength:
+        case Enums::ItemProperties::Dexterity:
+        case Enums::ItemProperties::Vitality:
+        case Enums::ItemProperties::Energy:
+            // Use full calculated range - allows negative values
+            return QPair<int, int>(minValue, maxValue);
+            
+        default:
+            // For most properties, use the calculated range
+            // This includes resistances which CAN be negative (penalties)
+            return QPair<int, int>(minValue, maxValue);
+    }
+}
+
+QPair<quint32, quint32> PropertyEditor::getParameterRange(int propertyId) const
+{
+    ItemPropertyTxt *propTxt = ItemDataBase::Properties()->value(propertyId);
+    if (!propTxt || propTxt->paramBits == 0) {
+        return QPair<quint32, quint32>(0, 0);
+    }
+    
+    // Safety: Limit parameter bits to prevent overflow
+    int bits = qMin(16, (int)propTxt->paramBits);
+    quint32 maxParam = (bits >= 32) ? 0xFFFFFFFF : ((1U << bits) - 1);
+    return QPair<quint32, quint32>(0, maxParam);
+}
+
+QPair<int, int> PropertyEditor::getSafeValueRange(int propertyId) const
+{
+    QPair<int, int> range = getValueRange(propertyId);
+    
+    // Apply additional safety limits to prevent game crashes
+    const int ABSOLUTE_MIN = -2147483647;  // Safe minimum for signed 32-bit
+    const int ABSOLUTE_MAX = 2147483647;   // Safe maximum for signed 32-bit
+    
+    // Clamp to safe bounds
+    range.first = qMax(ABSOLUTE_MIN, range.first);
+    range.second = qMin(ABSOLUTE_MAX, range.second);
+    
+    // Additional specific property limits based on game mechanics
+    switch (propertyId) {
+        case Enums::ItemProperties::Defence:
+            return QPair<int, int>(0, 65535);  // Defense max in D2
+            
+        case Enums::ItemProperties::Life:
+        case Enums::ItemProperties::Mana:
+        case Enums::ItemProperties::Stamina:
+            return QPair<int, int>(-32767, 32767);  // Reasonable stat range
+            
+        case Enums::ItemProperties::Strength:
+        case Enums::ItemProperties::Dexterity:
+        case Enums::ItemProperties::Vitality:
+        case Enums::ItemProperties::Energy:
+            return QPair<int, int>(-1000, 10000);  // Reasonable attribute range
+            
+        case Enums::ItemProperties::EnhancedDamage:
+            return QPair<int, int>(0, 65535);  // ED% cannot be negative
+            
+        // Damage properties
+        case Enums::ItemProperties::MinimumDamage:
+        case Enums::ItemProperties::MaximumDamage:
+        case Enums::ItemProperties::MinimumDamageSecondary:
+        case Enums::ItemProperties::MaximumDamageSecondary:
+        case Enums::ItemProperties::MinimumDamageFire:
+        case Enums::ItemProperties::MaximumDamageFire:
+        case Enums::ItemProperties::MinimumDamageLightning:
+        case Enums::ItemProperties::MaximumDamageLightning:
+        case Enums::ItemProperties::MinimumDamageMagic:
+        case Enums::ItemProperties::MaximumDamageMagic:
+        case Enums::ItemProperties::MinimumDamageCold:
+        case Enums::ItemProperties::MaximumDamageCold:
+        case Enums::ItemProperties::MinimumDamagePoison:
+        case Enums::ItemProperties::MaximumDamagePoison:
+            return QPair<int, int>(0, 32767);  // Damage cannot be negative
+            
+        default:
+            return range;
+    }
+}
+
+bool PropertyEditor::validateValueOverflow(int propertyId, int value) const
+{
+    QPair<int, int> safeRange = getSafeValueRange(propertyId);
+    return value >= safeRange.first && value <= safeRange.second;
+}
+
+bool PropertyEditor::validateParameterOverflow(int propertyId, quint32 parameter) const
+{
+    QPair<quint32, quint32> range = getParameterRange(propertyId);
+    return parameter <= range.second;
+}
+
+int PropertyEditor::getDisplayValueForProperty(int propertyId, const ItemProperty *property) const
+{
+    if (!property) return 0;
+    
+    // Most properties display the stored value directly
+    // But some need special handling
+    
+    ItemPropertyTxt *propTxt = ItemDataBase::Properties()->value(propertyId);
+    if (!propTxt) {
+#ifndef QT_NO_DEBUG
+        qDebug() << "PropertyEditor: No property definition found for ID" << propertyId;
+#endif
+        return property->value;
+    }
+    
+    int result = property->value;
+    
+    switch (propertyId) {
+        case Enums::ItemProperties::EnhancedDamage:
+            // Enhanced damage is stored with special handling
+            // The displayed value should match what user sees in game
+            break;
+            
+        case Enums::ItemProperties::Defence:
+            // Defense is stored as (value + add) in bitstring
+            // but property->value already has 'add' subtracted
+            break;
+            
+        // For most properties, the stored value is what should be displayed
+        default:
+            break;
+    }
+    
+#ifndef QT_NO_DEBUG
+    qDebug() << QString("PropertyEditor: Property %1 - stored: %2, display: %3, add: %4, bits: %5")
+                .arg(propertyId).arg(property->value).arg(result).arg(propTxt->add).arg(propTxt->bits);
+#endif
+    
+    return result;
+}
+
+int PropertyEditor::getStorageValueFromDisplay(int propertyId, int displayValue) const
+{
+    // Convert from display value back to storage value
+    // This reverses getDisplayValueForProperty
+    
+    ItemPropertyTxt *propTxt = ItemDataBase::Properties()->value(propertyId);
+    if (!propTxt) return displayValue;
+    
+    switch (propertyId) {
+        case Enums::ItemProperties::EnhancedDamage:
+            return displayValue;
+            
+        case Enums::ItemProperties::Defence:
+            return displayValue;
+            
+        default:
+            return displayValue;
+    }
+}
+
+void PropertyEditor::backupOriginalProperties()
+{
+    if (!_item) return;
+    
+    _originalProperties.clear();
+    _originalRwProperties.clear();
+    
+    // Backup item properties
+    for (auto it = _item->props.constBegin(); it != _item->props.constEnd(); ++it) {
+        _originalProperties.insert(it.key(), new ItemProperty(*it.value()));
+    }
+    
+    // Backup runeword properties
+    for (auto it = _item->rwProps.constBegin(); it != _item->rwProps.constEnd(); ++it) {
+        _originalRwProperties.insert(it.key(), new ItemProperty(*it.value()));
+    }
+}
+
+bool PropertyEditor::hasChanges() const
+{
+    return _hasChanges;
+}
+
+void PropertyEditor::onPropertyChanged()
+{
+    if (_updatingUI) return;
+    
+    _hasChanges = true;
+    updateButtonStates();
+    
+    // Validate all rows
+    for (PropertyEditorRow *row : _propertyRows) {
+        validatePropertyValue(row);
+    }
+    
+    emit propertyModified();
+}
+
+void PropertyEditor::onValueChanged()
+{
+    onPropertyChanged();
+}
+
+void PropertyEditor::onParameterChanged()
+{
+    onPropertyChanged();
+}
+
+void PropertyEditor::validateProperty()
+{
+    // Validate all properties
+    for (PropertyEditorRow *row : _propertyRows) {
+        validatePropertyValue(row);
+    }
+}
+
+void PropertyEditor::updateButtonStates()
+{
+    _applyButton->setEnabled(_hasChanges);
+    _revertButton->setEnabled(_hasChanges);
+    
+    if (_hasChanges) {
+        _statusLabel->setText(tr("Modified - %1 properties").arg(_propertyRows.size()));
+        _statusLabel->setStyleSheet("QLabel { color: orange; font-weight: bold; }");
+    } else {
+        _statusLabel->setText(tr("No changes - %1 properties").arg(_propertyRows.size()));
+        _statusLabel->setStyleSheet("QLabel { color: green; font-weight: bold; }");
+    }
+}
+
+void PropertyEditor::applyChanges()
+{
+    if (!_item || !_hasChanges) return;
+    
+    // Strong warning about potential corruption
+    QMessageBox::StandardButton ret = QMessageBox::warning(this, tr("Property Editor Warning"),
+        tr("⚠️ IMPORTANT WARNING ⚠️\n\n"
+           "Property Editor is EXPERIMENTAL and may cause file corruption!\n\n"
+           "• Backup your save files before proceeding\n"
+           "• Only modify EXISTING property values, avoid adding/removing properties\n"
+           "• Test changes on non-important characters first\n"
+           "• The save file may become corrupted and unloadable\n\n"
+           "Do you want to proceed at your own risk?"),
+        QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel, 
+        QMessageBox::No);
+    
+    if (ret != QMessageBox::Yes) return;
+    
+    try {
+        applyPropertyChanges();
+        
+        _hasChanges = false;
+        updateButtonStates();
+        
+        _statusLabel->setText(tr("Changes applied successfully!"));
+        _statusLabel->setStyleSheet("QLabel { color: green; font-weight: bold; }");
+        
+        emit itemChanged();
+        
+    } catch (const std::exception &e) {
+        QMessageBox::critical(this, tr("Error"), 
+                             tr("Failed to apply changes: %1").arg(e.what()));
+    } catch (...) {
+        QMessageBox::critical(this, tr("Error"), 
+                             tr("Failed to apply changes: Unknown error"));
+    }
+}
+
+void PropertyEditor::applyPropertyChanges()
+{
+    if (!_item) return;
+    
+    // Pre-validate all values for overflow before applying any changes
+    QStringList validationErrors;
+    for (const PropertyEditorRow *row : _propertyRows) {
+        int propertyId = row->propertyCombo->currentData().toInt();
+        if (propertyId <= 0) continue;
+        
+        int value = row->valueSpinBox->value();
+        quint32 parameter = row->parameterSpinBox->value();
+        
+        if (!validateValueOverflow(propertyId, value)) {
+            validationErrors << tr("Property %1: Value %2 exceeds safe range")
+                               .arg(propertyId).arg(value);
+        }
+        
+        if (!validateParameterOverflow(propertyId, parameter)) {
+            validationErrors << tr("Property %1: Parameter %2 exceeds safe range")
+                               .arg(propertyId).arg(parameter);
+        }
+    }
+    
+    if (!validationErrors.isEmpty()) {
+        QMessageBox::warning(this, tr("Overflow Protection"), 
+                           tr("Cannot apply changes due to overflow risks:\n\n%1")
+                           .arg(validationErrors.join("\n")));
+        return;
+    }
+    
+    // New approach: Only modify existing properties using ReverseBitWriter
+    // This is much safer than rebuilding the entire properties section
+    
+    for (const PropertyEditorRow *row : _propertyRows) {
+        int propertyId = row->propertyCombo->currentData().toInt();
+        if (propertyId <= 0) continue;
+        
+        int displayValue = row->valueSpinBox->value();
+        quint32 newParameter = row->parameterSpinBox->value();
+        
+        // Find existing property in item
+        ItemProperty *existingProp = _item->props.value(propertyId);
+        if (!existingProp) {
+            // Property doesn't exist - we'll skip adding new properties for safety
+            continue;
+        }
+        
+        // Convert display value back to storage value
+        int storageValue = getStorageValueFromDisplay(propertyId, displayValue);
+        
+        // Update the property value in memory
+        existingProp->value = storageValue;
+        existingProp->param = newParameter;
+        
+        // Update the property in the bit string using ReverseBitWriter
+        ItemPropertyTxt *propTxt = ItemDataBase::Properties()->value(propertyId);
+        if (propTxt && existingProp->bitStringOffset > 0) {
+            // Update value in bit string - add back the 'add' value for storage
+            int bitStringValue = storageValue + propTxt->add;
+            ReverseBitWriter::replaceValueInBitString(_item->bitString, 
+                                                    existingProp->bitStringOffset, 
+                                                    bitStringValue, 
+                                                    propTxt->bits);
+            
+            // Update parameter if property has parameter bits
+            if (propTxt->paramBits > 0) {
+                // Parameter comes after property ID in bit string
+                int paramOffset = existingProp->bitStringOffset - propTxt->paramBits;
+                ReverseBitWriter::replaceValueInBitString(_item->bitString, 
+                                                        paramOffset, 
+                                                        newParameter, 
+                                                        propTxt->paramBits);
+            }
+        }
+        
+        // Update display string
+        ItemParser::createDisplayStringForPropertyWithId(propertyId, existingProp);
+    }
+    
+    // Ensure bit string is properly aligned
+    ReverseBitWriter::byteAlignBits(_item->bitString);
+    
+    // Mark item as changed for save mechanism
+    _item->hasChanged = true;
+    
+    // Update backup
+    backupOriginalProperties();
+}
+
+void PropertyEditor::revertChanges()
+{
+    if (!_item || !_hasChanges) return;
+    
+    int ret = QMessageBox::question(this, tr("Revert Changes"),
+                                   tr("Revert all changes and restore original properties?"),
+                                   QMessageBox::Yes | QMessageBox::No);
+    
+    if (ret != QMessageBox::Yes) return;
+    
+    // Restore original properties
+    qDeleteAll(_item->props);
+    _item->props.clear();
+    
+    for (auto it = _originalProperties.constBegin(); it != _originalProperties.constEnd(); ++it) {
+        _item->props.insert(it.key(), new ItemProperty(*it.value()));
+    }
+    
+    // Reload the editor
+    setItem(_item);
+    
+    _hasChanges = false;
+    updateButtonStates();
+    
+    _statusLabel->setText(tr("Changes reverted"));
+    _statusLabel->setStyleSheet("QLabel { color: blue; font-weight: bold; }");
+    
+    emit itemChanged();
+}
+
+void PropertyEditor::removeProperty()
+{
+    QPushButton *removeButton = qobject_cast<QPushButton*>(sender());
+    if (!removeButton) return;
+    
+    // Find the property row that contains this remove button
+    for (int i = 0; i < _propertyRows.size(); ++i) {
+        PropertyEditorRow *row = _propertyRows[i];
+        if (row->removeButton == removeButton) {
+            removePropertyRow(row);
+            break;
+        }
+    }
+}

@@ -57,6 +57,10 @@ target_sources(MedianXLOfflineTools PRIVATE
 	propertiesviewerwidget.cpp
 	propertiesviewerwidget.h
 	propertiesviewerwidget.ui
+	propertyeditor.cpp
+	propertyeditor.h
+	propertymodificationengine.cpp
+	propertymodificationengine.h
 	qd2charrenamer.cpp
 	qd2charrenamer.h
 	qd2charrenamer.ui

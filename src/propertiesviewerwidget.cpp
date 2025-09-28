@@ -7,9 +7,11 @@
 #include "itemparser.h"
 #include "propertiesdisplaymanager.h"
 #include "characterinfo.hpp"
+#include "propertyeditor.h"
 
 #include <QAction>
 #include <QSettings>
+#include <QPushButton>
 
 #ifndef QT_NO_DEBUG
 #include <QDebug>
@@ -20,15 +22,22 @@ static const QString kBaseFormat("<html><body bgcolor=\"black\" align=\"center\"
 static const char *kTranslationContext = "PropertiesDisplayManager";
 
 
-PropertiesViewerWidget::PropertiesViewerWidget(QWidget *parent) : QWidget(parent), htmlLine("<hr />"), ui(new Ui::PropertiesViewerWidget), _item(0)
+PropertiesViewerWidget::PropertiesViewerWidget(QWidget *parent) 
+    : QWidget(parent)
+    , htmlLine("<hr />")
+    , ui(new Ui::PropertiesViewerWidget)
+    , _item(nullptr)
+    , _propertyEditor(nullptr)
 {
     ui->setupUi(this);
-
     ui->tabWidget->setCurrentIndex(0); // set tab icons
 }
 
 PropertiesViewerWidget::~PropertiesViewerWidget()
 {
+    if (_propertyEditor) {
+        delete _propertyEditor;
+    }
     delete ui;
 }
 
@@ -658,4 +667,87 @@ quint8 PropertiesViewerWidget::mysticOrbEffectMultiplier() const
     if (_item->props.contains(Enums::ItemProperties::MysticOrbsEffectDoubled) || _item->rwProps.contains(Enums::ItemProperties::MysticOrbsEffectDoubled))
         return 2;
     return 1;
+}
+
+void PropertiesViewerWidget::enableEditMode(bool enabled)
+{
+    // This method is kept for compatibility but functionality moved to openPropertyEditor()
+    if (enabled) {
+        openPropertyEditor();
+    }
+}
+
+void PropertiesViewerWidget::setupEditMode()
+{
+    // Stub implementation - functionality moved to PropertyEditor class
+}
+
+void PropertiesViewerWidget::populatePropertyEditors()
+{
+    // Stub implementation - functionality moved to PropertyEditor class
+}
+
+void PropertiesViewerWidget::createPropertyEditor(int propertyId, int value, quint32 param)
+{
+    // Stub implementation - functionality moved to PropertyEditor class
+}
+
+void PropertiesViewerWidget::clearPropertyEditors()
+{
+    // Stub implementation - functionality moved to PropertyEditor class
+}
+
+void PropertiesViewerWidget::addProperty()
+{
+    // Stub implementation - functionality moved to PropertyEditor class
+}
+
+void PropertiesViewerWidget::removeProperty()
+{
+    // Stub implementation - functionality moved to PropertyEditor class
+}
+
+void PropertiesViewerWidget::modifyPropertyValue()
+{
+    // Stub implementation - functionality moved to PropertyEditor class
+}
+
+void PropertiesViewerWidget::applyChanges()
+{
+    // Stub implementation - functionality moved to PropertyEditor class
+}
+
+void PropertiesViewerWidget::cancelChanges()
+{
+    // Stub implementation - functionality moved to PropertyEditor class
+}
+
+void PropertiesViewerWidget::openPropertyEditor()
+{
+    if (!_item) {
+        QMessageBox::information(this, tr("Property Editor"), 
+                               tr("Please select an item first."));
+        return;
+    }
+    
+    if (!_propertyEditor) {
+        _propertyEditor = new PropertyEditor(this);
+        _propertyEditor->setWindowTitle(tr("Property Editor - %1")
+                                       .arg(ItemDataBase::completeItemName(_item, false)));
+        _propertyEditor->setWindowFlags(Qt::Window | Qt::WindowCloseButtonHint | Qt::WindowMaximizeButtonHint);
+        _propertyEditor->resize(800, 600);
+        
+        // Connect signals
+        connect(_propertyEditor, &PropertyEditor::itemChanged, 
+                [this]() { 
+                    emit itemsChanged(); // Legacy signal
+                    emit itemsChanged(true); // Signal for MainWindow
+                    showItem(_item); 
+                });
+    }
+    
+    _propertyEditor->setItem(_item);
+    _propertyEditor->show();
+    _propertyEditor->raise();
+    _propertyEditor->activateWindow();
 }

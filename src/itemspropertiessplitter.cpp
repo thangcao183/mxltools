@@ -55,6 +55,10 @@ ItemsPropertiesSplitter::ItemsPropertiesSplitter(ItemStorageTableView *itemsView
     connect(_itemsView, SIGNAL(customContextMenuRequested(const QPoint &)), SLOT(showContextMenu(const QPoint &)));
     connect(_itemsView, SIGNAL(pressed(QModelIndex)), SLOT(moveBetweenStashes()));
     connect(copyBBCodesMenu, SIGNAL(triggered(QAction*)), SLOT(copyAllItemsBBCode(QAction*)));
+    
+    // Connect PropertiesViewerWidget signals to forward to ItemsViewerDialog and then MainWindow
+    connect(_propertiesWidget, SIGNAL(itemsChanged()), SIGNAL(itemsChanged()));
+    connect(_propertiesWidget, SIGNAL(itemsChanged(bool)), SIGNAL(itemsChanged(bool)));
 }
 
 void ItemsPropertiesSplitter::setModel(ItemStorageTableModel *model)
@@ -216,6 +220,11 @@ void ItemsPropertiesSplitter::showContextMenu(const QPoint &pos)
     {
         QList<QAction *> actions;
 
+        // Add edit properties action
+        QAction *editPropsAction = new QAction(tr("Edit Properties"), this);
+        connect(editPropsAction, SIGNAL(triggered()), SLOT(editItemProperties()));
+        actions << editPropsAction << separatorAction();
+
         if (shouldAddMoveItemAction())
         {
             QAction *moveBetweenStashesAction = new QAction(moveItemActionText() + QString(" (%1)").arg(tr("Alt+Click")), this);
@@ -371,6 +380,14 @@ bool ItemsPropertiesSplitter::moveBetweenStashes()
 void ItemsPropertiesSplitter::exportText()
 {
 
+}
+
+void ItemsPropertiesSplitter::editItemProperties()
+{
+    ItemInfo *item = selectedItem();
+    if (item) {
+        _propertiesWidget->openPropertyEditor();
+    }
 }
 
 void ItemsPropertiesSplitter::copyAllItemsBBCode(QAction *action)

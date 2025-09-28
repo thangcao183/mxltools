@@ -4,9 +4,17 @@
 #include "structs.h"
 
 #include <QSet>
+#include <QSpinBox>
+#include <QComboBox>
+#include <QPushButton>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QScrollArea>
 
 
 class ItemInfo;
+class PropertyEditor;
 
 namespace Ui { class PropertiesViewerWidget; }
 class QTextEdit;
@@ -28,17 +36,38 @@ public:
 
     const QString htmlLine; // it's intended that it's a class member and not static
 
+signals:
+    void itemsChanged();
+    void itemsChanged(bool modified);
+
 public slots:
     void removeAllMysticOrbs();
     void removeMysticOrb();
+    void openPropertyEditor();
 
 private:
     Ui::PropertiesViewerWidget *ui;
     ItemInfo *_item;
     QSet<int> _itemMysticOrbs, _rwMysticOrbs;
+    
+    // Property editor
+    PropertyEditor *_propertyEditor;
+    
+    // Removed unused edit mode UI components - functionality moved to PropertyEditor class
 
     QString propertiesToHtml(const PropertiesMap &properties, int textColor = ColorsManager::Blue);
     void renderHtml(QTextEdit *textEdit, const QString &description);
+    
+    void setupEditMode();
+    void populatePropertyEditors();
+    void clearPropertyEditors();
+    void createPropertyEditor(int propertyId, int value, quint32 param = 0);
+    void enableEditMode(bool enabled);
+    void addProperty();
+    void removeProperty();
+    void modifyPropertyValue();
+    void applyChanges();
+    void cancelChanges();
 
     void removeMysticOrbsFromProperties(const QSet<int> &mysticOrbs, PropertiesMultiMap *props);
     void removeMysticOrbData(int moCode, PropertiesMultiMap *props);
