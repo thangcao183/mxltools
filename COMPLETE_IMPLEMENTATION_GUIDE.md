@@ -411,6 +411,48 @@ class PropertyModificationHistory {
 - `ItemStatCost.txt` - Stat definitions and rules
 - Character save files (`.d2s`) - Binary data format
 
+## 🎨 Advanced Feature: Item Creation
+
+Dựa trên kiến thức Property Editor, có thể implement tính năng **Item Creation** để tạo item mới hoàn toàn hợp lệ.
+
+### ItemCreationEngine Architecture
+```cpp
+class ItemCreationEngine {
+    ItemInfo* createItem(const ItemCreationTemplate &template);
+    QString generateItemBitString(const ItemCreationData &data);
+    QString generateItemHeader(const ItemCreationData &data);
+    QString generatePropertiesBitString(const PropertiesMultiMap &properties);
+    bool validateItemCreationData(const ItemCreationData &data, QString *error);
+};
+```
+
+### Item Creation Process
+1. **Validate Template** - Check item code, quality, properties
+2. **Generate Header** - Create item header section with flags, location, extended data
+3. **Generate Properties** - Build properties bit string using same logic as Property Editor
+4. **Create ItemInfo** - Populate ItemInfo object with generated data
+5. **Set Relationships** - Link with database objects (ItemBase, PropertyTxt, etc.)
+
+### Key Implementation Points
+- **Reuse Property Logic** - Same bit manipulation as Property Editor
+- **Template System** - Predefined templates for common item types  
+- **Comprehensive Validation** - Ensure all created items are valid
+- **GUID Generation** - Unique identifiers for each created item
+- **Integration Ready** - Works seamlessly with existing ItemParser/PropertyEditor
+
+### Example Usage
+```cpp
+ItemCreationTemplate tmpl = ItemTemplateManager::createRingTemplate();
+tmpl.quality = ItemQuality::Magic;
+tmpl.properties.insert(ItemProperties::Strength, new ItemProperty(10, 0));
+tmpl.properties.insert(ItemProperties::Life, new ItemProperty(20, 0));
+
+ItemCreationEngine engine;
+ItemInfo *newRing = engine.createItem(tmpl);
+```
+
+*See `ITEM_CREATION_GUIDE.md` for complete implementation details.*
+
 ---
 
 **Document Created**: September 30, 2025  
