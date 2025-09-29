@@ -1,32 +1,31 @@
 {
-	"BUILD_DIR" : "/home/wolf/CODE/C/mxltools/build/qtsingleapplication/QtSingleApplication_autogen",
-	"CMAKE_BINARY_DIR" : "/home/wolf/CODE/C/mxltools/build",
-	"CMAKE_CURRENT_BINARY_DIR" : "/home/wolf/CODE/C/mxltools/build/qtsingleapplication",
-	"CMAKE_CURRENT_SOURCE_DIR" : "/home/wolf/CODE/C/mxltools/qtsingleapplication",
+	"BUILD_DIR" : "/home/wolf/CODE/mxltools/build/qtsingleapplication/QtSingleApplication_autogen",
+	"CMAKE_BINARY_DIR" : "/home/wolf/CODE/mxltools/build",
+	"CMAKE_CURRENT_BINARY_DIR" : "/home/wolf/CODE/mxltools/build/qtsingleapplication",
+	"CMAKE_CURRENT_SOURCE_DIR" : "/home/wolf/CODE/mxltools/qtsingleapplication",
 	"CMAKE_EXECUTABLE" : "/usr/bin/cmake",
-	"CMAKE_LIST_FILES" : [ "/home/wolf/CODE/C/mxltools/qtsingleapplication/CMakeLists.txt" ],
-	"CMAKE_SOURCE_DIR" : "/home/wolf/CODE/C/mxltools",
-	"CROSS_CONFIG" : false,
-	"DEP_FILE" : "/home/wolf/CODE/C/mxltools/build/qtsingleapplication/QtSingleApplication_autogen/deps",
+	"CMAKE_LIST_FILES" : [ "/home/wolf/CODE/mxltools/qtsingleapplication/CMakeLists.txt" ],
+	"CMAKE_SOURCE_DIR" : "/home/wolf/CODE/mxltools",
+	"DEP_FILE" : "/home/wolf/CODE/mxltools/build/qtsingleapplication/QtSingleApplication_autogen/deps",
 	"DEP_FILE_RULE_NAME" : "QtSingleApplication_autogen/timestamp",
 	"HEADERS" : 
 	[
 		[
-			"/home/wolf/CODE/C/mxltools/qtsingleapplication/qtlocalpeer.h",
+			"/home/wolf/CODE/mxltools/qtsingleapplication/qtlocalpeer.h",
 			"MU",
 			"EWIEGA46WW/moc_qtlocalpeer.cpp",
 			null
 		],
 		[
-			"/home/wolf/CODE/C/mxltools/qtsingleapplication/qtsingleapplication.h",
+			"/home/wolf/CODE/mxltools/qtsingleapplication/qtsingleapplication.h",
 			"MU",
 			"EWIEGA46WW/moc_qtsingleapplication.cpp",
 			null
 		]
 	],
 	"HEADER_EXTENSIONS" : [ "h", "hh", "h++", "hm", "hpp", "hxx", "in", "txx" ],
-	"INCLUDE_DIR" : "/home/wolf/CODE/C/mxltools/build/qtsingleapplication/QtSingleApplication_autogen/include",
-	"MOC_COMPILATION_FILE" : "/home/wolf/CODE/C/mxltools/build/qtsingleapplication/QtSingleApplication_autogen/mocs_compilation.cpp",
+	"INCLUDE_DIR" : "/home/wolf/CODE/mxltools/build/qtsingleapplication/QtSingleApplication_autogen/include",
+	"MOC_COMPILATION_FILE" : "/home/wolf/CODE/mxltools/build/qtsingleapplication/QtSingleApplication_autogen/mocs_compilation.cpp",
 	"MOC_DEFINITIONS" : 
 	[
 		"IS_QT5=1",
@@ -46,18 +45,19 @@
 	],
 	"MOC_INCLUDES" : 
 	[
-		"/home/wolf/CODE/C/mxltools/qtsingleapplication",
-		"/usr/include/qt5",
-		"/usr/include/qt5/QtCore",
-		"/usr/lib64/qt5/mkspecs/linux-g++",
-		"/usr/include/qt5/QtGui",
-		"/usr/include/qt5/QtNetwork",
-		"/usr/include/qt5/QtWidgets",
-		"/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15",
-		"/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu",
-		"/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward",
-		"/usr/lib/gcc/x86_64-pc-linux-gnu/15/include",
+		"/home/wolf/CODE/mxltools/qtsingleapplication",
+		"/usr/include/x86_64-linux-gnu/qt5",
+		"/usr/include/x86_64-linux-gnu/qt5/QtCore",
+		"/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++",
+		"/usr/include/x86_64-linux-gnu/qt5/QtGui",
+		"/usr/include/x86_64-linux-gnu/qt5/QtNetwork",
+		"/usr/include/x86_64-linux-gnu/qt5/QtWidgets",
+		"/usr/include/c++/13",
+		"/usr/include/x86_64-linux-gnu/c++/13",
+		"/usr/include/c++/13/backward",
+		"/usr/lib/gcc/x86_64-linux-gnu/13/include",
 		"/usr/local/include",
+		"/usr/include/x86_64-linux-gnu",
 		"/usr/include"
 	],
 	"MOC_MACRO_NAMES" : [ "Q_OBJECT", "Q_GADGET", "Q_NAMESPACE", "Q_NAMESPACE_EXPORT" ],
@@ -67,31 +67,31 @@
 	[
 		"/usr/bin/c++",
 		"-std=c++11",
-		"-w",
 		"-dM",
 		"-E",
-		"/usr/share/cmake/Modules/CMakeCXXCompilerABI.cpp"
+		"-c",
+		"/usr/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp"
 	],
-	"MOC_PREDEFS_FILE" : "/home/wolf/CODE/C/mxltools/build/qtsingleapplication/QtSingleApplication_autogen/moc_predefs.h",
+	"MOC_PREDEFS_FILE" : "/home/wolf/CODE/mxltools/build/qtsingleapplication/QtSingleApplication_autogen/moc_predefs.h",
 	"MOC_RELAXED_MODE" : false,
 	"MOC_SKIP" : [],
 	"MULTI_CONFIG" : false,
-	"PARALLEL" : 16,
-	"PARSE_CACHE_FILE" : "/home/wolf/CODE/C/mxltools/build/qtsingleapplication/CMakeFiles/QtSingleApplication_autogen.dir/ParseCache.txt",
-	"QT_MOC_EXECUTABLE" : "/usr/lib64/qt5/bin/moc",
-	"QT_UIC_EXECUTABLE" : "/usr/lib64/qt5/bin/uic",
+	"PARALLEL" : 8,
+	"PARSE_CACHE_FILE" : "/home/wolf/CODE/mxltools/build/qtsingleapplication/CMakeFiles/QtSingleApplication_autogen.dir/ParseCache.txt",
+	"QT_MOC_EXECUTABLE" : "/usr/lib/qt5/bin/moc",
+	"QT_UIC_EXECUTABLE" : "/usr/lib/qt5/bin/uic",
 	"QT_VERSION_MAJOR" : 5,
 	"QT_VERSION_MINOR" : 15,
-	"SETTINGS_FILE" : "/home/wolf/CODE/C/mxltools/build/qtsingleapplication/CMakeFiles/QtSingleApplication_autogen.dir/AutogenUsed.txt",
+	"SETTINGS_FILE" : "/home/wolf/CODE/mxltools/build/qtsingleapplication/CMakeFiles/QtSingleApplication_autogen.dir/AutogenUsed.txt",
 	"SOURCES" : 
 	[
 		[
-			"/home/wolf/CODE/C/mxltools/qtsingleapplication/qtlocalpeer.cpp",
+			"/home/wolf/CODE/mxltools/qtsingleapplication/qtlocalpeer.cpp",
 			"MU",
 			null
 		],
 		[
-			"/home/wolf/CODE/C/mxltools/qtsingleapplication/qtsingleapplication.cpp",
+			"/home/wolf/CODE/mxltools/qtsingleapplication/qtsingleapplication.cpp",
 			"MU",
 			null
 		]
@@ -100,6 +100,5 @@
 	"UIC_SEARCH_PATHS" : [],
 	"UIC_SKIP" : [],
 	"UIC_UI_FILES" : [],
-	"USE_BETTER_GRAPH" : false,
 	"VERBOSITY" : 0
 }

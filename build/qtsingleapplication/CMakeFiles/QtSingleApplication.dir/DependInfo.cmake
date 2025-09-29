@@ -9,9 +9,9 @@ set(CMAKE_DEPENDS_LANGUAGES
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "" "qtsingleapplication/QtSingleApplication_autogen/timestamp" "custom" "qtsingleapplication/QtSingleApplication_autogen/deps"
-  "/home/wolf/CODE/C/mxltools/build/qtsingleapplication/QtSingleApplication_autogen/mocs_compilation.cpp" "qtsingleapplication/CMakeFiles/QtSingleApplication.dir/QtSingleApplication_autogen/mocs_compilation.cpp.o" "gcc" "qtsingleapplication/CMakeFiles/QtSingleApplication.dir/QtSingleApplication_autogen/mocs_compilation.cpp.o.d"
-  "/home/wolf/CODE/C/mxltools/qtsingleapplication/qtlocalpeer.cpp" "qtsingleapplication/CMakeFiles/QtSingleApplication.dir/qtlocalpeer.cpp.o" "gcc" "qtsingleapplication/CMakeFiles/QtSingleApplication.dir/qtlocalpeer.cpp.o.d"
-  "/home/wolf/CODE/C/mxltools/qtsingleapplication/qtsingleapplication.cpp" "qtsingleapplication/CMakeFiles/QtSingleApplication.dir/qtsingleapplication.cpp.o" "gcc" "qtsingleapplication/CMakeFiles/QtSingleApplication.dir/qtsingleapplication.cpp.o.d"
+  "/home/wolf/CODE/mxltools/build/qtsingleapplication/QtSingleApplication_autogen/mocs_compilation.cpp" "qtsingleapplication/CMakeFiles/QtSingleApplication.dir/QtSingleApplication_autogen/mocs_compilation.cpp.o" "gcc" "qtsingleapplication/CMakeFiles/QtSingleApplication.dir/QtSingleApplication_autogen/mocs_compilation.cpp.o.d"
+  "/home/wolf/CODE/mxltools/qtsingleapplication/qtlocalpeer.cpp" "qtsingleapplication/CMakeFiles/QtSingleApplication.dir/qtlocalpeer.cpp.o" "gcc" "qtsingleapplication/CMakeFiles/QtSingleApplication.dir/qtlocalpeer.cpp.o.d"
+  "/home/wolf/CODE/mxltools/qtsingleapplication/qtsingleapplication.cpp" "qtsingleapplication/CMakeFiles/QtSingleApplication.dir/qtsingleapplication.cpp.o" "gcc" "qtsingleapplication/CMakeFiles/QtSingleApplication.dir/qtsingleapplication.cpp.o.d"
   )
 
 # Targets to which this target links which contain Fortran sources.

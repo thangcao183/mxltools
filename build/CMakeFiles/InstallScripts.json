@@ -1,9 +1,0 @@
-{
-	"InstallScripts" : 
-	[
-		"/home/wolf/CODE/C/mxltools/build/cmake_install.cmake",
-		"/home/wolf/CODE/C/mxltools/build/src/cmake_install.cmake",
-		"/home/wolf/CODE/C/mxltools/build/qtsingleapplication/cmake_install.cmake"
-	],
-	"Parallel" : false
-}
