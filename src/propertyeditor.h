@@ -51,15 +51,17 @@ private:
         QLabel *parameterLabel;
         QPushButton *removeButton;
         QLabel *warningLabel;
+        QLabel *typeLabel; // New: shows "Item" or "RW" to indicate property type
         int originalPropertyId;
         int originalValue;
         quint32 originalParameter;
         bool isNew;
+        bool isRunewordProperty; // New: track if this is a runeword property
     };
 
     void setupUI();
     void populatePropertyCombo(QComboBox *combo);
-    void addPropertyRow(int propertyId = -1, int value = 0, quint32 parameter = 0, bool isNew = true);
+    void addPropertyRow(int propertyId = -1, int value = 0, quint32 parameter = 0, bool isNew = true, bool isRunewordProperty = false);
     void removePropertyRow(PropertyEditorRow *row);
     void updatePropertyRow(PropertyEditorRow *row);
     void validatePropertyValue(PropertyEditorRow *row);
@@ -74,6 +76,7 @@ private:
     bool validateParameterOverflow(int propertyId, quint32 parameter) const;
     int getDisplayValueForProperty(int propertyId, const ItemProperty *property) const;
     int getStorageValueFromDisplay(int propertyId, int displayValue) const;
+    bool isPropertyAllowedMultipleTimes(int propertyId) const;
     
     void backupOriginalProperties();
     void applyPropertyChanges();
