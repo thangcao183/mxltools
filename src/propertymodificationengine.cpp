@@ -105,50 +105,77 @@ bool PropertyModificationEngine::reconstructItemBitString(ItemInfo *item)
     if (!item) return false;
     
     try {
-        // Find the position where properties start in the bit string
-        // Properties come after the item header and basic item data
+        // Use ItemParser logic to calculate exact properties start position
+        int propertiesStart = calculatePropertiesStartPosition(item);
         
-        // Parse the existing bit string to find where properties begin
-        ReverseBitReader reader(item->bitString);
-        QString baseItemBits = item->bitString;
-        
-        // Find the properties section by looking for the first property ID or end marker
-        int propertiesStart = -1;
-        
-        // Scan through the bit string looking for property IDs
-        for (int pos = 0; pos < item->bitString.length() - 9; pos++) {
-            QString segment = item->bitString.mid(pos, 9);
-            bool ok;
-            int value = segment.toInt(&ok, 2);
+        if (propertiesStart < 0) {
+            // Fallback: estimate properties start based on typical item structure
+            // This is safer than failing completely
+            qDebug() << "PropertyModificationEngine: Using fallback estimation for properties start";
             
-            if (ok && ((value > 0 && value < 512) || value == 511)) { // Valid property ID or end marker
-                // Check if this looks like a valid property position
-                ItemPropertyTxt *propTxt = ItemDataBase::Properties()->value(value);
-                if (propTxt || value == 511) {
-                    propertiesStart = pos;
+            // Typical minimum item size before properties: ~200-400 bits
+            // Look for a reasonable position by scanning backwards from end
+            propertiesStart = item->bitString.length() - 200; // Conservative estimate
+            
+            if (propertiesStart < 100) propertiesStart = 100; // Ensure some minimum space for item data
+            
+            qDebug() << "PropertyModificationEngine: Fallback properties start:" << propertiesStart;
+        }
+        
+        // Keep everything before properties (item header + basic data)
+        QString beforeProperties = item->bitString.left(propertiesStart);
+        qDebug() << "PropertyModificationEngine: Before properties section length:" << beforeProperties.length();
+        
+        // Check if there's data after properties that we need to preserve
+        QString afterProperties;
+        if (!item->props.isEmpty()) {
+            // Find where current properties end by looking for end marker (511)
+            QString currentBitString = item->bitString;
+            int endMarkerPos = -1;
+            
+            // Search for property end marker (511 = 111111111 in 9 bits)
+            QString endMarkerPattern = "111111111";
+            for (int i = propertiesStart; i <= currentBitString.length() - 9; i++) {
+                if (currentBitString.mid(i, 9) == endMarkerPattern) {
+                    endMarkerPos = i + 9;
                     break;
                 }
             }
+            
+            if (endMarkerPos > 0 && endMarkerPos < currentBitString.length()) {
+                afterProperties = currentBitString.mid(endMarkerPos);
+                qDebug() << "PropertyModificationEngine: Found data after properties, length:" << afterProperties.length();
+            }
         }
         
-        if (propertiesStart < 0) {
-            // If we can't find properties, assume they start after basic item data
-            // This is a fallback - in practice we should calculate the exact position
-            propertiesStart = item->bitString.length() - 100; // Rough estimate
-            if (propertiesStart < 0) propertiesStart = 0;
-        }
-        
-        // Keep everything before properties
-        QString newBitString = item->bitString.left(propertiesStart);
-        
-        // Build new properties section
+        // Build new properties section using ItemParser's property writing logic
         QString propertiesBits = buildPropertiesBitString(item->props);
+        qDebug() << "PropertyModificationEngine: New properties section length:" << propertiesBits.length();
         
-        // Append the new properties
-        newBitString += propertiesBits;
+        // Assemble complete bit string
+        QString newBitString = beforeProperties + propertiesBits + afterProperties;
         
-        // Byte align the result
+        qDebug() << "PropertyModificationEngine: Before reconstruction:" 
+                 << "total=" << item->bitString.length()
+                 << "before_props=" << beforeProperties.length() 
+                 << "after_props=" << afterProperties.length();
+        
+        // Byte align the result (same as ItemParser does)
         ReverseBitWriter::byteAlignBits(newBitString);
+        
+        qDebug() << "PropertyModificationEngine: After reconstruction:" 
+                 << "total=" << newBitString.length() << "(was:" << item->bitString.length() << ")"
+                 << "new_props=" << propertiesBits.length();
+        
+        // Validate we didn't lose critical data
+        if (newBitString.length() < item->bitString.length() - 50) { // Allow some difference for property changes
+            qDebug() << "PropertyModificationEngine: WARNING - Significant bit loss detected!";
+            qDebug() << "Original bit string:" << item->bitString.left(100) << "...";
+            qDebug() << "New bit string:" << newBitString.left(100) << "...";
+            // Don't apply the change if too much data is lost
+            setError(tr("Reconstruction would lose too much data"));
+            return false;
+        }
         
         // Update the item's bit string
         item->bitString = newBitString;
@@ -171,16 +198,28 @@ QString PropertyModificationEngine::buildPropertiesBitString(const PropertiesMul
 {
     QString bitString;
     
-    // Get ordered list of properties
-    QList<QPair<int, ItemProperty*>> orderedProps = getOrderedProperties(properties);
+    qDebug() << "PropertyModificationEngine: Building properties bit string for" << properties.size() << "properties";
     
-    // Write each property
-    for (const auto &pair : orderedProps) {
-        writePropertyToBits(bitString, pair.first, pair.second);
+    try {
+        // Get ordered list of properties
+        QList<QPair<int, ItemProperty*>> orderedProps = getOrderedProperties(properties);
+        
+        qDebug() << "PropertyModificationEngine: Got" << orderedProps.size() << "ordered properties";
+        
+        // Write each property
+        for (const auto &pair : orderedProps) {
+            qDebug() << "PropertyModificationEngine: Writing property ID" << pair.first 
+                     << "value" << pair.second->value << "param" << pair.second->param;
+            writePropertyToBits(bitString, pair.first, pair.second);
+        }
+        
+        // Add end marker
+        insertEndMarker(bitString);
+        
+    } catch (...) {
+        qDebug() << "PropertyModificationEngine: Exception in buildPropertiesBitString";
+        throw;
     }
-    
-    // Add end marker
-    insertEndMarker(bitString);
     
     return bitString;
 }
@@ -469,10 +508,18 @@ QList<QPair<int, ItemProperty*>> PropertyModificationEngine::getOrderedPropertie
 {
     QList<QPair<int, ItemProperty*>> orderedList;
     
+    qDebug() << "PropertyModificationEngine: getOrderedProperties input size:" << properties.size();
+    
     // Convert multimap to list
     for (auto it = properties.constBegin(); it != properties.constEnd(); ++it) {
+        if (!it.value()) {
+            qDebug() << "PropertyModificationEngine: Null property value for ID" << it.key();
+            continue;
+        }
         orderedList.append(QPair<int, ItemProperty*>(it.key(), it.value()));
     }
+    
+    qDebug() << "PropertyModificationEngine: After filtering, list size:" << orderedList.size();
     
     // Sort by property ID
     std::sort(orderedList.begin(), orderedList.end(), 
@@ -546,4 +593,232 @@ void PropertyModificationEngine::setError(const QString &error)
 {
     _lastError = error;
     emit errorOccurred(error);
+}
+
+int PropertyModificationEngine::calculatePropertiesStartPosition(ItemInfo *item)
+{
+    if (!item) return -1;
+    
+    // Try to use existing bitStringOffset from properties if available
+    // This is more reliable than re-parsing
+    if (!item->props.isEmpty()) {
+        auto firstProp = item->props.constBegin();
+        int offset = firstProp.value()->bitStringOffset;
+        if (offset > 16) { // Must be after JM header
+            // Convert from ItemParser offset (which includes JM) to actual bit position
+            // ItemParser offset points to parameter+value start, we need to go back to property ID
+            ItemPropertyTxt *propTxt = ItemDataBase::Properties()->value(firstProp.key());
+            if (propTxt) {
+                // Go back: value bits + param bits + property ID bits = total property size
+                int propertyTotalBits = 9 + propTxt->paramBits + propTxt->bits;
+                int propertiesStart = item->bitString.length() - (offset - 16) - propTxt->paramBits - propTxt->bits;
+                
+                qDebug() << "PropertyModificationEngine: Using existing offset method, properties start at:" << propertiesStart;
+                
+                if (propertiesStart >= 0 && propertiesStart < item->bitString.length()) {
+                    return propertiesStart;
+                }
+            }
+        }
+    }
+    
+    // Fallback: try re-parsing (but catch exceptions gracefully)
+    ReverseBitReader bitReader(item->bitString);
+    
+    try {
+        qDebug() << "PropertyModificationEngine: Attempting to re-parse to find properties start";
+        qDebug() << "BitString length:" << item->bitString.length() << "isEar:" << item->isEar << "isExtended:" << item->isExtended;
+        
+        // Skip all the same fields that ItemParser skips before reaching properties
+        skipItemBasicData(bitReader, item);
+        
+        // Return current position - this is where properties start
+        int pos = bitReader.pos();
+        
+        qDebug() << "PropertyModificationEngine: Re-parse successful, properties start at:" << pos;
+        
+        // Validate position is reasonable
+        if (pos < 0 || pos >= item->bitString.length()) {
+            qDebug() << "PropertyModificationEngine: Invalid properties start position:" << pos;
+            return -1;
+        }
+        
+        return pos;
+        
+    } catch (int errorCode) {
+        qDebug() << "PropertyModificationEngine: Exception" << errorCode << "while calculating properties position";
+        qDebug() << "BitReader position when exception occurred:" << bitReader.pos();
+        return -1;
+    } catch (...) {
+        qDebug() << "PropertyModificationEngine: Unknown exception while calculating properties position";
+        return -1;
+    }
+}
+
+void PropertyModificationEngine::skipItemBasicData(ReverseBitReader &bitReader, ItemInfo *item)
+{
+    // This mirrors the exact parsing logic in ItemParser::parseItem
+    // Skip all fields before properties section
+    
+    qDebug() << "PropertyModificationEngine: Starting skipItemBasicData, absolutePos:" << bitReader.absolutePos();
+    
+    // Add validation to prevent reading past bitstring end
+    // ReverseBitReader uses internal _pos that counts from end, not from beginning
+    auto safeSkip = [&bitReader](int bits, const char* field = "") {
+        if (bitReader.absolutePos() - bits < 0) {
+            qDebug() << "PropertyModificationEngine: Cannot skip" << bits << "bits for" << field 
+                     << "at position" << bitReader.pos() << "(absolute:" << bitReader.absolutePos() << ")";
+            throw 3; // Same exception code as ReverseBitReader
+        }
+        bitReader.skip(bits);
+    };
+    
+    auto safeReadNumber = [&bitReader](int bits, const char* field = "") -> int {
+        if (bitReader.absolutePos() - bits < 0) {
+            qDebug() << "PropertyModificationEngine: Cannot read" << bits << "bits for" << field 
+                     << "at position" << bitReader.pos() << "(absolute:" << bitReader.absolutePos() << ")";
+            throw 3; // Same exception code as ReverseBitReader
+        }
+        return bitReader.readNumber(bits);
+    };
+    
+    auto safeReadBool = [&bitReader](const char* field = "") -> bool {
+        if (bitReader.absolutePos() - 1 < 0) {
+            qDebug() << "PropertyModificationEngine: Cannot read bool for" << field 
+                     << "at position" << bitReader.pos() << "(absolute:" << bitReader.absolutePos() << ")";
+            throw 3; // Same exception code as ReverseBitReader  
+        }
+        return bitReader.readBool();
+    };
+    
+    // Skip item flags and basic info
+    safeSkip(1, "isQuest"); 
+    safeSkip(3, "unknown1");
+    safeSkip(1, "isIdentified"); 
+    safeSkip(5, "unknown2");
+    safeSkip(1, "isDuped"); 
+    safeSkip(1, "isSocketed"); 
+    safeSkip(2, "unknown3");
+    safeSkip(2, "illegal+unk"); 
+    safeSkip(1, "isEar"); 
+    safeSkip(1, "isStarter"); 
+    safeSkip(2, "unknown4");
+    safeSkip(1, "unknown5");
+    safeSkip(1, "isExtended"); 
+    safeSkip(1, "isEthereal"); 
+    safeSkip(1, "unknown6");
+    safeSkip(1, "isPersonalized"); 
+    safeSkip(1, "unknown7");
+    safeSkip(1, "isRW"); 
+    safeSkip(5, "unknown8");
+    safeSkip(8, "version"); 
+    safeSkip(2, "unknown9");
+    safeSkip(3, "location"); 
+    safeSkip(4, "whereEquipped"); 
+    safeSkip(4, "column"); 
+    safeSkip(4, "row"); 
+    safeSkip(3, "storage");
+
+    if (item->isEar) {
+        safeSkip(3, "earClassCode");
+        safeSkip(7, "earLevel");
+        for (int i = 0; i < 18; ++i) {
+            if (safeReadNumber(7, "earNameChar") == 0) break;
+        }
+        return; // Ears don't have properties
+    }
+
+    // Skip item type (4 bytes)
+    safeSkip(32, "itemType");
+
+    if (item->isExtended) {
+        qDebug() << "PropertyModificationEngine: Processing extended item, pos:" << bitReader.pos();
+        safeSkip(3); // socketablesNumber
+        safeSkip(32); // guid
+        safeSkip(7); // ilvl
+        safeSkip(4); // quality
+        
+        if (safeReadBool()) // has variable graphic
+            safeSkip(3);
+        if (safeReadBool()) // autoprefix
+            safeSkip(11);
+
+        ItemBase *itemBase = ItemDataBase::Items()->value(item->itemType);
+        if (!itemBase) return;
+        
+        switch (item->quality) {
+        case Enums::ItemQuality::Normal:
+            break;
+        case Enums::ItemQuality::LowQuality: 
+        case Enums::ItemQuality::HighQuality:
+            safeSkip(3); // nonMagicType
+            break;
+        case Enums::ItemQuality::Magic:
+            safeSkip(22); // prefix & suffix
+            break;
+        case Enums::ItemQuality::Set: 
+        case Enums::ItemQuality::Unique:
+            safeSkip(15); // setOrUniqueId
+            break;
+        case Enums::ItemQuality::Rare: 
+        case Enums::ItemQuality::Crafted:
+            safeSkip(16); // first & second names
+            for (int i = 0; i < 6; ++i)
+                if (safeReadBool())
+                    safeSkip(11); // prefix or suffix (1-3)
+            break;
+        case Enums::ItemQuality::Honorific:
+            safeSkip(16);
+            break;
+        }
+
+        if (item->isRW)
+            safeSkip(16); // RW code
+
+        // Skip inscribed name
+        if (item->isPersonalized) {
+            for (int i = 0; i < 16; ++i) {
+                if (safeReadNumber(ItemParser::kInscribedNameCharacterLength) == 0) break;
+            }
+        }
+
+        safeSkip(1); // tome of ID bit
+        if (ItemDataBase::isTomeWithScrolls(item))
+            safeSkip(5); // book ID
+
+        // Handle armor/weapon specific data - mirror ItemParser logic exactly
+        const bool isArmor = ItemParser::itemTypesInheritFromType(itemBase->types, "armo");
+        if (isArmor) {
+            ItemPropertyTxt *defenceProp = ItemDataBase::Properties()->value(Enums::ItemProperties::Defence);
+            if (defenceProp) safeReadNumber(defenceProp->bits); // Read defense but don't store
+        }
+        if (isArmor || ItemParser::itemTypesInheritFromType(itemBase->types, "weap")) {
+            ItemPropertyTxt *maxDurabilityProp = ItemDataBase::Properties()->value(Enums::ItemProperties::DurabilityMax);
+            if (maxDurabilityProp) {
+                // Read maxDurability to check if we need to read current durability too
+                int maxDurability = safeReadNumber(maxDurabilityProp->bits) - maxDurabilityProp->add;
+                if (maxDurability > 0) {
+                    ItemPropertyTxt *durabilityProp = ItemDataBase::Properties()->value(Enums::ItemProperties::Durability);
+                    if (durabilityProp) safeReadNumber(durabilityProp->bits); // Read current durability but don't store
+                }
+            }
+        }
+
+        // Handle quantity for stackable items - must read, not skip
+        if (itemBase->isStackable)
+            safeReadNumber(9); // Read quantity but don't store
+        
+        // Handle sockets number - must read, not skip
+        if (item->isSocketed)
+            safeReadNumber(4); // Read sockets number but don't store
+
+        // Handle set lists flags - must read each bool, not bulk skip
+        if (item->quality == Enums::ItemQuality::Set) {
+            const int kSetListsNumber = 5;
+            for (int i = 0; i < kSetListsNumber; ++i)
+                safeReadBool(); // Read each set list flag but don't store
+        }
+    }
+    
+    // Now bitReader is positioned right at the start of properties
 }

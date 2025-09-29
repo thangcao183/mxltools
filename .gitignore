@@ -46,3 +46,24 @@ CMakeUserPresets.json
 build/
 
 utils/txt_parser/CompressFiles*
+
+# Build directories
+build/
+build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+CPackConfig.cmake
+CPackSourceConfig.cmake
+
+# Generated files
+Makefile
+moc/
+ui/
+rcc/
+obj/
+*.moc
+
+# Executable
+MedianXLOfflineTools
+MedianXLOfflineTools.exe

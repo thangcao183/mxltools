@@ -19,10 +19,7 @@
 #include <QMessageBox>
 #include <QApplication>
 #include <QStyle>
-
-#ifndef QT_NO_DEBUG
 #include <QDebug>
-#endif
 
 PropertyEditor::PropertyEditor(QWidget *parent)
     : QWidget(parent)
@@ -235,8 +232,12 @@ void PropertyEditor::clear()
         delete item;
     }
     
+    // Clean up original properties backup
+    qDeleteAll(_originalProperties);
     _originalProperties.clear();
+    qDeleteAll(_originalRwProperties);
     _originalRwProperties.clear();
+    
     _hasChanges = false;
     _updatingUI = false;
     
@@ -868,18 +869,29 @@ void PropertyEditor::backupOriginalProperties()
 {
     if (!_item) return;
     
+    qDebug() << "PropertyEditor: Backing up" << _item->props.size() << "properties and" << _item->rwProps.size() << "RW properties";
+    
+    // Clean up existing backups
+    qDeleteAll(_originalProperties);
     _originalProperties.clear();
+    qDeleteAll(_originalRwProperties);
     _originalRwProperties.clear();
     
     // Backup item properties
     for (auto it = _item->props.constBegin(); it != _item->props.constEnd(); ++it) {
-        _originalProperties.insert(it.key(), new ItemProperty(*it.value()));
+        if (it.value()) {
+            _originalProperties.insert(it.key(), new ItemProperty(*it.value()));
+        }
     }
     
     // Backup runeword properties
     for (auto it = _item->rwProps.constBegin(); it != _item->rwProps.constEnd(); ++it) {
-        _originalRwProperties.insert(it.key(), new ItemProperty(*it.value()));
+        if (it.value()) {
+            _originalRwProperties.insert(it.key(), new ItemProperty(*it.value()));
+        }
     }
+    
+    qDebug() << "PropertyEditor: Backup completed";
 }
 
 bool PropertyEditor::hasChanges() const
@@ -976,6 +988,11 @@ void PropertyEditor::applyPropertyChanges()
 {
     if (!_item) return;
     
+    // Temporarily disable PropertyModificationEngine due to bit loss issues
+    // Use original ReverseBitWriter approach with fixed offset calculation
+    // PropertyModificationEngine engine;
+    // PropertiesMultiMap newProperties;
+    
     // Pre-validate all values for overflow before applying any changes
     QStringList validationErrors;
     for (const PropertyEditorRow *row : _propertyRows) {
@@ -1003,9 +1020,7 @@ void PropertyEditor::applyPropertyChanges()
         return;
     }
     
-    // New approach: Only modify existing properties using ReverseBitWriter
-    // This is much safer than rebuilding the entire properties section
-    
+    // Use original ReverseBitWriter approach with corrected offset calculation
     for (const PropertyEditorRow *row : _propertyRows) {
         int propertyId = row->propertyCombo->currentData().toInt();
         if (propertyId < 0) continue;
@@ -1024,35 +1039,46 @@ void PropertyEditor::applyPropertyChanges()
         
         if (!existingProp) {
             // Property doesn't exist in either props or rwProps - skip for safety
+            qDebug() << "PropertyEditor: Property" << propertyId << "not found, skipping";
             continue;
         }
         
         // Convert display value back to storage value
         int storageValue = getStorageValueFromDisplay(propertyId, displayValue);
         
+        qDebug() << "PropertyEditor: Updating property" << propertyId << "from" << existingProp->value 
+                 << "to" << storageValue << "param from" << existingProp->param << "to" << newParameter;
+        
         // Update the property value in memory
         existingProp->value = storageValue;
         existingProp->param = newParameter;
         
-        // Update the property in the bit string using ReverseBitWriter
+        // Update the property in the bit string using ReverseBitWriter with CORRECTED offsets
         ItemPropertyTxt *propTxt = ItemDataBase::Properties()->value(propertyId);
-        if (propTxt && existingProp->bitStringOffset > 0) {
-            // Update value in bit string - add back the 'add' value for storage
-            int bitStringValue = storageValue + propTxt->add;
-            ReverseBitWriter::replaceValueInBitString(_item->bitString, 
-                                                    existingProp->bitStringOffset, 
-                                                    bitStringValue, 
-                                                    propTxt->bits);
+        if (propTxt && existingProp->bitStringOffset > 16) { // Must be after JM header
             
-            // Update parameter if property has parameter bits
+            qDebug() << "PropertyEditor: Property" << propertyId << "bitStringOffset=" << existingProp->bitStringOffset 
+                     << "paramBits=" << propTxt->paramBits << "valueBits=" << propTxt->bits;
+            
+            // CORRECTED: bitStringOffset points to start of param+value section (after property ID)
+            // Parameter comes first, then value
             if (propTxt->paramBits > 0) {
-                // Parameter comes after property ID in bit string
-                int paramOffset = existingProp->bitStringOffset - propTxt->paramBits;
+                int paramOffset = existingProp->bitStringOffset;
+                qDebug() << "PropertyEditor: Updating parameter at offset" << paramOffset;
                 ReverseBitWriter::replaceValueInBitString(_item->bitString, 
                                                         paramOffset, 
                                                         newParameter, 
                                                         propTxt->paramBits);
             }
+            
+            // Value comes after parameter
+            int valueOffset = existingProp->bitStringOffset + propTxt->paramBits;
+            int bitStringValue = storageValue + propTxt->add; // Add back the 'add' value for storage
+            qDebug() << "PropertyEditor: Updating value at offset" << valueOffset << "value=" << bitStringValue;
+            ReverseBitWriter::replaceValueInBitString(_item->bitString, 
+                                                    valueOffset, 
+                                                    bitStringValue, 
+                                                    propTxt->bits);
         }
         
         // Update display string
@@ -1065,8 +1091,18 @@ void PropertyEditor::applyPropertyChanges()
     // Mark item as changed for save mechanism
     _item->hasChanged = true;
     
+    qDebug() << "PropertyEditor: Updating backup...";
+    
     // Update backup
     backupOriginalProperties();
+    
+    qDebug() << "PropertyEditor: Marking changes and updating UI...";
+    
+    // Mark item as changed and reset UI state
+    _hasChanges = false;  // Reset since we just applied changes
+    updateButtonStates();
+    
+    qDebug() << "PropertyEditor: All done!";
 }
 
 void PropertyEditor::revertChanges()

@@ -57,6 +57,10 @@ private:
     void insertPropertyId(QString &bitString, int propertyId);
     void insertEndMarker(QString &bitString);
     
+    // Item structure parsing utilities - reuse ItemParser logic
+    int calculatePropertiesStartPosition(ItemInfo *item);
+    void skipItemBasicData(class ReverseBitReader &bitReader, ItemInfo *item);
+    
     // Property ordering and dependencies
     QList<QPair<int, ItemProperty*>> getOrderedProperties(const PropertiesMultiMap &properties);
     void handlePropertyDependencies(const PropertiesMultiMap &properties, QList<QPair<int, ItemProperty*>> &orderedList);

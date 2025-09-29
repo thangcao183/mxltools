@@ -70,7 +70,9 @@ SOURCES += src/main.cpp \
            src/stashsortingoptionsdialog.cpp \
            src/helpwindowdisplaymanager.cpp \
            src/skilltreedialog.cpp \
-           src/allstatsdialog.cpp
+           src/allstatsdialog.cpp \
+           src/propertyeditor.cpp \
+           src/propertymodificationengine.cpp
 
 HEADERS += src/medianxlofflinetools.h \
            src/resurrectpenaltydialog.h \
@@ -110,7 +112,9 @@ HEADERS += src/medianxlofflinetools.h \
            src/stashsortingoptionsdialog.h \
            src/helpwindowdisplaymanager.h \
            src/skilltreedialog.h \
-           src/allstatsdialog.h
+           src/allstatsdialog.h \
+           src/propertyeditor.h \
+           src/propertymodificationengine.h
 
 FORMS += src/medianxlofflinetools.ui \
          src/resurrectpenaltydialog.ui \
