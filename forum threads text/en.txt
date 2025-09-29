@@ -1,0 +1,396 @@
+[size=6]Just in case, here's the Russian thread: https://worldofplayers.ru/threads/34489/[/size]
+
+[size=18][color=#6666ff]This is [b][u]NOT[/u][/b] a cheating tool and only for [b][u]Single Player[/u][/b] mode! You must be not in game before editing your character, as otherwise your changes won't be applied.[/color][/size]
+
+As you can guess from the title, it's an almost complete offline analogue of grig's [url=http://grig.vlexofree.com/]Median XL Online Tools[/url], but with nice additions. It's written in C++ using the [url=https://www.qt.io]Qt framework[/url] (v4.8.7 as of current release).
+
+[b]Main features:[/b]
+[spoil][list][*]Character:
+[list][*]info with some hidden stats
+[*]respeccing
+[*]renaming
+[*]downleveling
+[*]waypoint activation
+[*]HC resurrection and conversion[/list][*]Items:
+[list][*]viewing all character/PlugY items and their properties (including hidden)
+[*]searching
+[*]sorting PlugY stashes
+[*]moving items between character/shared PlugY stash (v0.5.1 and later)
+[*]mass disenchant of uniques/sets with preview
+[*]mass upgrade of gems/runes
+[*]recovering missing Cube[/list][*]Selected item (context menu):
+[list][*]disenchanting into shards/signet
+[*]eating signets
+[*]removing all or specific Mystic Orbs (UMO not supported yet)
+[*]rune downgrading
+[*]deleting
+[*]collect/extract Shrines to/from Shrine Vessel[/list][*]OS-specific:
+[list][*].d2s file association
+[*]recent files in Windows 7 taskbar / macOS dock icon
+[*]drag'n'drop .d2s files on the application window, application shortcut and on the Windows 7 taskbar / macOS dock icon
+[*]update check
+[*]single instance[/list][*]and many others ;)[/list][/spoil]
+
+[b]Downloads[/b]:
+[list][*]Windows and macOS binaries: https://github.com/kambala-decapitator/MedianXLOfflineTools/releases/latest
+[*]source code: https://github.com/kambala-decapitator/MedianXLOfflineTools[/list]
+
+[b]Mini-FAQ:[/b]
+[spoil]Q: Windows app doesn't launch saying that some dll not found!
+A: Install MSVC++ 2019 Redistributable vc_redist.x[c]86[/c].exe from [url=https://aka.ms/vs/16/release/vc_redist.x86.exe]Microsoft's website[/url].
+
+Q: Where are Sigma saves?
+A: %APPDATA%\MedianXL\save
+
+Q: How to install mod data?
+A: Restart the application after following actions if it's running.
+[list][*]Windows: unpack the archive in a folder that contains MedianXLOfflineTools.exe replacing everything
+[*]macOS: unpack the archive somewhere and...
+[list][*]short answer: move [b]the contents of 'resources/data', not the 'data' folder itself[/b], to 'MedianXLOfflineTools.app/Contents/Resources/data'
+[*]long 'manual' answer: open unpacked folder, open 'resources' folder inside, Select All (Cmd+A), Copy (Cmd+C), locate MedianXLOfflineTools.app, right-click (or Control-click) it, select 'Show package contents', open Contents/Resources/data folder, Paste (Cmd+V) replacing everything
+[*]long 'terminal' answer: open Terminal, cd to where you unpacked mod data (this folder should contain unpacked 'resources' folder) and use the following shell script:
+[code]APP_PATH="/Applications/MedianXLOfflineTools.app" # place the actual path inside double quotes, it's just an example
+cp -R resources/data/* "${APP_PATH}/Contents/resources/data"[/code][/list][/list]
+
+Q: I've fcked up my character and/or PlugY stash and neither the game nor this application can load it. How can I restore it from backup?
+A: Go to the save folder and look for file(s) called <chararcter>.<d2s or d2x>_<date>.bak and delete everything on the right up to d2s or d2x. If it's the shared stash you want to restore, then it's called _LOD<_HC for hardcore>_SharedStashSave.sss_<date>.bak and delete everything on the right up to sss.
+If you can't see file extension:
+[list][*]Windows Explorer: Folder Options - View - Scroll to the bottom - Uncheck 'Hide extensions...' - OK
+[*]macOS Finder: Preferences - Last tab (Advanced or similar name) - Show all file name extensions[/list]
+
+Q: Application doesn't open; in the list of processes it appears just for a second and/or crash report is displayed.
+A: Probably the character you had loaded last time became broken. To make the application work again, simply double-click 'disable_auto_load' file (on Windows you also have to press 'Yes' after this): it disables loading last used character. If you want to enable this option again, open Options menu in the application and select the option.[/spoil]
+
+[b]Old version with pre-Sigma v2 mods support:[/b]
+[spoil]Application should be able to load character from any version of Median XL and successfully perform basic operations with it like respeccing. Items processing relies on the mod source files, so it may not be compatible with any chacarcter from different version. This data is softcoded, so when a new mod version is released, usually there's no need to recompile the application - one just needs to replace the data found in 'resources/data' with the new one, which I will provide. Currently supported mod versions:
+[list][*]Sigma 1.x
+[*]Median XL 2017 1.3
+[*]Ultimative XVI (v5+ characters should be compatible)
+[*]Kehjan Labyrinth + Tathamet vs Anu
+[*]Hardened
+[*]Median XL 2012 v005 (earlier versions should also work)[/list]
+
+[b]Sigma 1.x only[/b]:
+[list][*][i]Windows[/i] (7 SP1 and later): https://mxl.vn.cz/kambala/MedianXLOfflineTools_0.5.8.7z (if it doesn't launch, install MSVC++ 2019 Redistributable vc_redist.x[c]86[/c].exe from [url=https://aka.ms/vs/16/release/vc_redist.x86.exe]Microsoft's website[/url])
+[*][i]macOS[/i] (10.9 and later, Intel 64bit): https://mxl.vn.cz/kambala/MedianXLOfflineTools_mac_0.5.8.txz[/list]
+
+[b]Other mods[/b]:
+[list][*][b]Application[/b]:
+[list][*][i]Windows[/i] (XP SP3 and later): https://mxl.vn.cz/kambala/MedianXLOfflineTools_0.4.6.7z (if it doesn't launch, install MSVC++ 2015 Redistributable vc_redist.x[c]86[/c].exe from [url=https://www.mediafire.com/?84qc8d5dy3cd9f6]Mediafire[/url] or from [url=https://www.microsoft.com/en-us/download/details.aspx?id=52685]Microsoft's website[/url])
+[*][i]macOS[/i] (10.9 and later, Intel 64bit, recommended version for modern OSs): https://mxl.vn.cz/kambala/MedianXLOfflineTools_mac_0.4.6.tbz
+[*][i]older Mac OS X[/i] (10.5 and later, 32bit universal binary, will not work starting with macOS 10.15): https://mxl.vn.cz/kambala/MedianXLOfflineTools_mac_universal_32bit_0.4.6.tbz[/list]
+[*][b]Mod data[/b] (find installation instructions in Mini-FAQ below):
+[list][*][i]2017 1.3:[/i] https://mxl.vn.cz/kambala/2017-1.3.zip
+[*][i]Ultimative XVI:[/i] https://mxl.vn.cz/kambala/ultimativeXVI.7z
+[*][i]2012 v005 / Kehjan Labyrinth + Tathamet vs Anu / Hardened:[/i] https://mxl.vn.cz/kambala/2012-005+kehjan+tathamet.7z[/list][/list][/spoil]
+
+[b]Screenshots:[/b]
+[spoil]click to see in full size
+[url=http://s1125.photobucket.com/user/kambala_decapitator/media/Median%20XL%20Offline%20Tools/main4.png.html][img]http://i1125.photobucket.com/albums/l592/kambala_decapitator/Median%20XL%20Offline%20Tools/th_main4.png[/img][/url][url=http://s1125.photobucket.com/user/kambala_decapitator/media/Median%20XL%20Offline%20Tools/main_mac2.png.html][img]http://i1125.photobucket.com/albums/l592/kambala_decapitator/Median%20XL%20Offline%20Tools/th_main_mac2.png[/img][/url]
+[url=http://s1125.photobucket.com/user/kambala_decapitator/media/Median%20XL%20Offline%20Tools/items2.png.html][img]http://i1125.photobucket.com/albums/l592/kambala_decapitator/Median%20XL%20Offline%20Tools/th_items2.png[/img][/url][url=http://s1125.photobucket.com/user/kambala_decapitator/media/Median%20XL%20Offline%20Tools/items_plugy2.png.html][img]http://i1125.photobucket.com/albums/l592/kambala_decapitator/Median%20XL%20Offline%20Tools/th_items_plugy2.png[/img][/url]
+[url=http://s1125.photobucket.com/albums/l592/kambala_decapitator/Median%20XL%20Offline%20Tools/?action=view&current=classcharm.png][img]http://i1125.photobucket.com/albums/l592/kambala_decapitator/Median%20XL%20Offline%20Tools/th_classcharm.png[/img][/url][url=http://s1125.photobucket.com/albums/l592/kambala_decapitator/Median%20XL%20Offline%20Tools/?action=view&current=props_all.png][img]http://i1125.photobucket.com/albums/l592/kambala_decapitator/Median%20XL%20Offline%20Tools/th_props_all.png[/img][/url][url=http://s1125.photobucket.com/albums/l592/kambala_decapitator/Median%20XL%20Offline%20Tools/?action=view&current=props_item.png][img]http://i1125.photobucket.com/albums/l592/kambala_decapitator/Median%20XL%20Offline%20Tools/th_props_item.png[/img][/url][url=http://s1125.photobucket.com/albums/l592/kambala_decapitator/Median%20XL%20Offline%20Tools/?action=view&current=props_rw.png][img]http://i1125.photobucket.com/albums/l592/kambala_decapitator/Median%20XL%20Offline%20Tools/th_props_rw.png[/img][/url][url=http://s1125.photobucket.com/albums/l592/kambala_decapitator/Median%20XL%20Offline%20Tools/?action=view&current=props_sockets.png][img]http://i1125.photobucket.com/albums/l592/kambala_decapitator/Median%20XL%20Offline%20Tools/th_props_sockets.png[/img][/url]
+[url=http://s1125.photobucket.com/user/kambala_decapitator/media/Median%20XL%20Offline%20Tools/downgrade_rune.png.html][img]http://i1125.photobucket.com/albums/l592/kambala_decapitator/Median%20XL%20Offline%20Tools/th_downgrade_rune.png[/img][/url][url=http://s1125.photobucket.com/albums/l592/kambala_decapitator/Median%20XL%20Offline%20Tools/?action=view&current=item_menu1.png][img]http://i1125.photobucket.com/albums/l592/kambala_decapitator/Median%20XL%20Offline%20Tools/th_item_menu1.png[/img][/url][url=http://s1125.photobucket.com/albums/l592/kambala_decapitator/Median%20XL%20Offline%20Tools/?action=view&current=removeMO.png][img]http://i1125.photobucket.com/albums/l592/kambala_decapitator/Median%20XL%20Offline%20Tools/th_removeMO.png[/img][/url][url=http://s1125.photobucket.com/user/kambala_decapitator/media/Median%20XL%20Offline%20Tools/eat_signet.png.html][img]http://i1125.photobucket.com/albums/l592/kambala_decapitator/Median%20XL%20Offline%20Tools/th_eat_signet.png[/img][/url]
+[url=http://s1125.photobucket.com/user/kambala_decapitator/media/Median%20XL%20Offline%20Tools/sort.png.html][img]http://i1125.photobucket.com/albums/l592/kambala_decapitator/Median%20XL%20Offline%20Tools/th_sort.png[/img][/url][url=http://s1125.photobucket.com/user/kambala_decapitator/media/Median%20XL%20Offline%20Tools/sort_help.png.html][img]http://i1125.photobucket.com/albums/l592/kambala_decapitator/Median%20XL%20Offline%20Tools/th_sort_help.png[/img][/url]
+[url=http://s1125.photobucket.com/user/kambala_decapitator/media/Median%20XL%20Offline%20Tools/disenchant_preview.png.html][img]http://i1125.photobucket.com/albums/l592/kambala_decapitator/Median%20XL%20Offline%20Tools/th_disenchant_preview.png[/img][/url]
+[url=http://s1125.photobucket.com/albums/l592/kambala_decapitator/Median%20XL%20Offline%20Tools/?action=view&current=search.png][img]http://i1125.photobucket.com/albums/l592/kambala_decapitator/Median%20XL%20Offline%20Tools/th_search.png[/img][/url][url=http://s1125.photobucket.com/albums/l592/kambala_decapitator/Median%20XL%20Offline%20Tools/?action=view&current=search_help.png][img]http://i1125.photobucket.com/albums/l592/kambala_decapitator/Median%20XL%20Offline%20Tools/th_search_help.png[/img][/url]
+[url=http://s1125.photobucket.com/albums/l592/kambala_decapitator/Median%20XL%20Offline%20Tools/?action=view&current=skillplan1.png][img]http://i1125.photobucket.com/albums/l592/kambala_decapitator/Median%20XL%20Offline%20Tools/th_skillplan1.png[/img][/url]
+[url=http://s1125.photobucket.com/user/kambala_decapitator/media/Median%20XL%20Offline%20Tools/skill_tree.png.html][img]http://i1125.photobucket.com/albums/l592/kambala_decapitator/Median%20XL%20Offline%20Tools/th_skill_tree.png[/img][/url][url=http://s1125.photobucket.com/user/kambala_decapitator/media/Median%20XL%20Offline%20Tools/all_stats.png.html][img]http://i1125.photobucket.com/albums/l592/kambala_decapitator/Median%20XL%20Offline%20Tools/th_all_stats.png[/img][/url]
+[url=http://s1125.photobucket.com/albums/l592/kambala_decapitator/Median%20XL%20Offline%20Tools/?action=view&current=recent_win.png][img]http://i1125.photobucket.com/albums/l592/kambala_decapitator/Median%20XL%20Offline%20Tools/th_recent_win.png[/img][/url][url=http://s1125.photobucket.com/albums/l592/kambala_decapitator/Median%20XL%20Offline%20Tools/?action=view&current=recent_mac.png][img]http://i1125.photobucket.com/albums/l592/kambala_decapitator/Median%20XL%20Offline%20Tools/th_recent_mac.png[/img][/url][/spoil]
+
+
+[b]Changelog[/b]: https://github.com/kambala-decapitator/MedianXLOfflineTools/releases
+
+Older versions:
+[spoil][i]v0.6.3 (28.09.2021)[/i]
+[list][f] one more fix of "move all items here" to save modified Sigma stashes
+[f] sort uniques by ilvl to differentiate between SSSSSSSSSSSSSSSSU
+[/list]
+[i]v0.6.2 (21.09.2021)[/i]
+[list][f] fix "move all items here" from a Sigma stash to the Infinite one
+[f] fix update check (back to http)
+[f] fix sorting of sets
+[/list]
+[i]v0.6.1 (19.09.2021)[/i]
+[list][+] app-only shared infinite stash
+[f] fix crash on saving characters with consumed Signet of Skill
+[f] fix parsing Sigma stashes
+[-] remove "Deactivate Halls of Pain" - no longer needed
+[/list]
+[i]v0.6 (18.09.2021)[/i]
+[list][+] Sigma v2 support including extended stashes
+[-] remove Mystic Orbs support (will be restored later)
+[-] PlugY stash format no longer supported
+[/list]
+[i]v0.5.8 (22.08.2021)[/i]
+[list][+] handle "Orb Effects Applied to this Item are Quadrupled"
+[+] handle class restriction item property
+[f] improve full item description to match the game's closer
+[f] fix displaying Innate Elemental Damage
+[f] fix displaying Jitan's Gate Cooldown
+[/list]
+[i]v0.5.7 (10.01.2021)[/i]
+[list][f] compatibility with Sigma 1.8
+[f] sorting improvements
+[/list]
+[i]v0.5.6 (16.08.2020)[/i]
+[list][f] prevent crash when items have unknown/legacy properties
+[f] fix showing orange text on Relics
+[f] fix showing magic damage
+[f] fix damage multiplier on ethereal weapons
+[f] fix rendering inline colors
+[f] fix showing letters on Xis RWs
+[f] fix showing Cannot be Unsocketed property of Xis runes
+[f] update sorting templates: include new sets and more 'misc' items
+[/list]
+[i]v0.5.5 (11.04.2020)[/i]
+[list][+] contains Sigma 1.5 data
+[+] show completion of Rescue Anya quest (A5Q3)
+[+] show quest location in label tooltip
+[+] show str/dex damage bonus on weapons
+[f] fix app closing on pressing OK in the update dialog
+[f] fix detecting trophies and upgrades on charms
+[f] remove mentioning Signets of Skill
+[f] max Signets of Learning will no longer display as MAX+1
+[/list]
+[i]v0.5.4 (20.10.2019)[/i]
+[list][f] fix computing max available stat points for Sigma 1.3 (Lam Esen's Tome)
+[f] fix crash on opening items tab with one of the Wirt's Leg
+[/list]
+[i]v0.5.3 (09.09.2019)[/i]
+[list][+] copy item's BBCode for the forum: context menu and batch action
+[+] notiy about mod data update
+[f] fix d2s corruption on respeccing Necromancer's skills with active Iron Golem
+[f] fix occasional app freeze related to Iron Golem
+[f] fix displaying skill trees
+[/list]
+[i]v0.5.2.1 (07.05.2019)[/i]
+[list][f] improve parsing of merc/Iron Golem items to prevent error in rare cases
+[/list]
+[i]v0.5.2 (06.05.2019)[/i]
+[list][+] display item used to create Iron Golem
+[f] fix duping when moving to/from PlugY stash
+[-] don't display corpse items (in Sigma there're no corpses)
+[/list]
+[i]v0.5.1 (17.02.2019)[/i]
+[list][+] moving selected item to/from shared PlugY stash: context menu command and Alt+Click hotkey
+[+] moving all currently visible items to last page in the shared PlugY stash: button in the bottom
+[f] disenchanting logic matches Sigma
+[f] fixed rlvl calculation when a unique jewel is inserted
+[f] fixed required str/dex values
+[f] fixed displaying special (orange) SU properties
+[/list]
+[i]v0.5 (05.02.2019)[/i]
+[list][+] Sigma support
+[-] removed support of pre-Sigma mods
+[/list]
+[i]v0.4.6 (26.12.2018)[/i]
+[list][f] fixed saving shared stash after opening another character
+[/list]
+[i]v0.4.5 (22.04.2018)[/i]
+[list][f] fixed saving shared stash that has no gold
+[f] fixed detection of multi-rune RWs
+[f] fixed loading non-2017 mod data
+[f] fixed displaying Amazon skill tree
+[/list]
+[i]v0.4.4 (28.06.2017)[/i]
+[list][+] Median XL 2017 support
+[f] fixed crash after closing update dialog on Windows
+[/list]
+[i]v0.4.3 (02.05.2017)[/i]
+[list][+] PlugY v11 support
+[/list]
+[i]v0.4.2.1 (06.03.2015)[/i]
+[list][f] one must never forget De Morgan's laws
+[/list]
+[i]v0.4.2 (23.02.2015)[/i]
+[list][+] Ultimative XV support (support for arbitrary character skill number actually)
+[+] Shrine Vessel management (collect/extract Shrines)
+[/list]
+[i]v0.4.1.3 (09.03.2014)[/i]
+[list][f] fixed displaying Ultimative rune letters in an item
+[f] fixed damage calculation of ethereal weapons
+[f] fixed removing oskill/reanimate MOs (hopefully for the last time)
+[f] fixed duping last opened shared stash plugy page to personal stash
+[f] disabled disenchanting quest items in Ultimative
+[f] updated skill icons
+[/list]
+[i]v0.4.1.2 (07.10.2013)[/i]
+[list][+] added ability to (de)personalize items with arbitrary names
+[/list]
+[i]v0.4.1.1 (26.08.2013)[/i]
+[list][f] fixed typo in the code that broke saving PlugY stashes
+[/list]
+[i]v0.4.1 (25.08.2013)[/i]
+[list][+] separate box for waypoints management
+[+] all character stats display (similar to PlugY's extended info)
+[+] set bonuses display
+[+] skill tree display (read-only)
+[+] merged min-max damage display (Adds x-y...)
+[+] added poison damage length display
+[+] added ability to fill belt with Moon Symbols for sorceress
+[f] fixed loading stashes on Mac OS X when character path has non-latin characters
+[f] set items display correct required level
+[f] fixed removal of -requirements MO
+[f] items from non-legacy sets are determined correctly (e.g. Rainbow Warrior)
+[m] main window's height can't be changed on Windows
+[m] increased max recent files to 15
+[/list]
+[i]v0.4 (13.07.2013)[/i]
+[list][+] sorting PlugY stashes
+[+] adding to and removing blank pages from PlugY stashes
+[+] rune reservation when upgrading runes
+[+] Golden Bird quest completion status
+[+] weapon damage display
+[+] Strength/Dexterity item requirments display
+[+] Ear info display
+[+] cyclic item navigation with arrows
+[+] Replenish/Drain Life property displays life per second
+[+] sending OS info to MXL server (thanks aahz). And no, I'm not stealing your passwords and credit card numbers.
+[f] final friggin' MO removal fix
+[f] items viewer window has correct height when item management section is folded
+[f] Ear doesn't crash the app
+[f] silently setting correct clvl instead of complaining when clvl in stats doesn't equal 'main' clvl
+[f] focus stays on the page spinbox in items viewer after entering page manually
+[f] custom set item image display
+[f] all jewels display correct image
+[f] Magic Rune displays its properties correctly
+[f] no charms think that they have MOs
+[f] items window appears correctly on top of main window in Mac OS X
+[f] file/product version appear in the properties of Windows .exe
+[m] life/mana/stamina table cells have gray background
+[m] Find dialog's autocomplete honors case-sensitivity option
+[m] both columns in find results occupy equal amount of space when resizing
+[m] messagebox warning about color in name has a checkbox to not show the warning again
+[m] update check uses MXL server first (thanks aahz)
+[m] Help menu has 'Search' item on Mac OS X
+[/list]
+[i]v0.3.1 (16.12.2012)[/i]
+[list][+] deactivating Halls of Pain WP on Destruction
+[+] monitoring for externally changed files
+[+] displaying which backups were created on successful character save
+[f] file associations in Windows 8 (just showing native dialog)
+[f] jewels now appear in Disenchant Preview dialog
+[f] file association alert on Mac OS X can now be dismissed with Escape
+[f] fixed/removed some dead forum links
+[f] fixed a crash when deleting the only item in a storage
+[m] modified Edit menu
+[m] reworked Disenchant Preview dialog: added more columns, added ability to sort and filter the table, greatly increased its performance, fixed checkboxes on Mac OS X
+[m] when deleting an item default button in the confirmation dialog is Yes
+[/list]
+[i]v0.3.0.1 (02.09.2012)[/i]
+[list][f] fixed displaying of elemental min/max damage
+[f] fixed one gamebreaking bug that could let you cheat
+[/list]
+[i]v0.3 (01.09.2012)[/i]
+[list][+] Ultimative v5+ support
+[+] mass disenchant of uniques/sets with preview (you can select multiple items via Ctrl/Command and Shift and change their checked state via context menu or by pressing spacebar)
+[+] mass upgrade of gems/runes
+[+] rune downgrade (via context menu)
+[+] eating signets from context menu and with a hotkey
+[+] mercenary and corpse items display (you can also delete items and remove MOs from them)
+[+] corpse items are automatically moved to character on saving if possible
+[+] added displaying 'duped' flag if an item has such property (such items can't be disenchanted to Arcane Shards in Ultimative)
+[+] added displaying amount of gems cubed with Ultimative's Trader's Chest
+[+] using default D2 save path on Windows if there's no last saved path
+[+] multiple backups (see Options)
+[+] now application doesn't load last character if mod data has changed between launches
+[f] finally fixed loading items that have item header inside item data
+[img]http://troll-face.ru/static/mememaker/484-dicaprio-inception.jpg[/img]
+[f] correctly (un)checking of 'activate wapoints' menu command and keeping it synced with the corresponding checkbox in main window
+[f] some sacred unique hammers and belts can now be disenchanted in Ultimative
+[f] fixed merc experience display when switching characters on Mac OS X;
+[m] added maximize/minimize buttons to items window
+[m] all item images have transparent background now
+[/list]
+[i]v0.2.2.1 (09.06.2012)[/i]
+[list][+] display completion status of skill/stat quests
+[+] display experience in progress bar for character and mercenary (on Mac OS X amount of experience is displayed in status bar when you hover the mouse on a progress bar)
+[+] update checker
+[f] completely fixed skillplan links
+[f] correctly disabling convert to SC menu action after unloading HC character
+[/list]
+[i]v0.2.2 (27.05.2012)[/i]
+[list][+] remove specific mystic orbs
+[+] Ultimative support
+[+] Ultimative: resurrecting HC character automatically converts him to SC
+[f] inserted runes are displayed for all items, not just for RW
+[f] deleting items from a plugy stash correctly saves the stash
+[f] app window no longer stays 'modified' if failed to load a character
+[f] skillplan now correctly sets bonuses for generated links
+[/list]
+[i]v0.2.1 (29.03.2012)[/i]
+[list][+] links for Skillpoint Planner
+[+] .d2s file association
+[+] recent files in Windows 7 taskbar / Mac OS X dock icon
+[+] drag'n'drop .d2s files on the application window, application shortcut and on the Windows 7 taskbar / Mac OS X dock icon (Windows 7 note: you can drop files on the taskbar only if application is pinned there or there's a shortcut on the desktop)
+[+] save prompt
+[+] display properties of unidentified items
+[+] display mod data version in the window title
+[+] display character path on the right of the status bar
+[+] display location of corrupted items
+[f] characters with unidentified items are saved correctly now
+[f] correct display of colored names on Mac OS X
+[m] moved recent files to a separate sub-menu in File
+[/list]
+[i]v0.2.0.1 (24.02.2012)[/i]
+[list][+] display belt items in the gear tab
+[f] now items in inventory, cube and non-plugy stash can actually be disenchanted
+[f] plugy navigation sub-menu is correctly disabled after items window is closed
+[f] gear tab has correct number of columns
+[f] 'Vasiliy's Following' has russian translation now
+[m] all item actions in context menu are mapped to shortcuts
+[m] grid color changed to gray;
+[m] removed extra space between grid and plugy navigation
+[-] removed duper message because it's impossible to determine if a jewel was duped legitly (via recipe)
+[/list]
+[i]v0.2 (22.02.2012)[/i]
+[list][+] view items on character, in inventory, Cube, stash and PlugY stashes
+[+] in-game-like PlugY navigation (but you can also enter number of desired page directly)
+[+] shared gold display (in status tip for stash gold, displayed if > 0)
+[+] almost complete item description (str/dex requirements, attack speed and affixes are missing)
+[+] separate description of item properties, RW properties, socketables and mystic orbs
+[+] item search
+[+] recover missing Cube
+[+] disenchant selected item into shards/signet (you can't disenchant gear items)
+[+] remove all mystic orbs from selected item (UMO not supported)
+[+] delete selected item
+[+] load last used character automatically
+[+] display of completed challenges on class charm
+[+] correct text color on the class charm :P
+[f] fixed decreasing of life/mana/stamina when downleveling
+[f] fixed the program calling you 1337 hacker if you didn't talk to Atma after killing Radament
+[f] fixed the program calling you 1337 hacker if you ate 3 Signets of Skill and clicked on one more (v0.1 said that you ate 500 Signets of Skill)
+[f] added a warning when using colors in character name
+[f] fixed ugly stats table size
+[/list]
+[i]v0.1 (01.08.2011)[/i]
+[list][+] skills and stats respec
+[+] waypoint activation
+[+] renaming with colors
+[+] downleveling
+[+] HC -> SC
+[+] resurrect HC character
+[+] change mercenary name
+[+] [url=http://www.medianxl.com/t1229-median-xl-hardened]Median Hardened[/url] support
+[+] experimental: change mercenary type (seems to be not quite stable)
+[/list]
+[b]TODO[/b]:
+[list][*]skills allocation
+[*]show UMO properties
+[*]try unMO UMOs
+[*]export item to bbcode/html
+[*]generate some bbcode/html report about character and/or plugy stashes contents
+[*]moving items around
+[*]creation of plugy stashes
+[*]affix rlvl and names
+[*]nice display of property 'Adds x-y ... damage'
+[*]unsocket items[/list][/spoil]
+
+[b]Credits[/b]:
+[list][*][i]BrotherLaz[/i] for this awesome mod
+[*][i]MarcoNecroX[/i] for a hot extension of Median XL called Ultimative
+[*][i]grig[/i] for the Perl source of Median XL Online Tools and tips
+[*][i][url=https://d2mods.info/index.php?ind=reviews&op=section_view&idev=4]Phrozen Keep File Guides[/url][/i] for tons of useful information on txt sources
+[*][i]aahz[/i] for providing space on MXL server
+[*][i]whist[/i] for helping with txt magic and D2 internals
+[*][i]community members[/i] (find full list in the app) for intensive testing and tips on GUI & functionality[/list]

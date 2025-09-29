@@ -1,0 +1,299 @@
+#code	equiv	varImages	name
+2hax	axe		2h axe
+a2ha	ct2w,an2x		2h axe (Angelic)
+s2ha	2hax,ct2w		2h axe (Sacred)
+2hbx	baxe,2hax		2h barb axe
+s2hx	2hbx,ct2w		2h barb axe (Sacred)
+2hbs	bswd,2hsd		2h barb sword
+s2hb	2hbs,ct2w		2h barb sword (Sacred)
+2hsd	swor		2h sword
+a2hd	ct2w,an2x		2h sword (Angelic)
+s2hd	2hsd,ct2w		2h sword (Sacred)
+flsh	prsh		Active Shrine (10 Charges)
+abow	bow,amaz		Amazon Bow
+qabw	abow,ct2w		Amazon Bow (Sacred)
+azhm	helm		Amazon Helm
+szhm	azhm,ct1a		Amazon Helm (Sacred)
+amaz	clas,fbox		Amazon Item
+ajav	jave,amaz		Amazon Javelin
+qajv	ajav,ct1w		Amazon Javelin (Sacred)
+azsd	shie		Amazon Shield
+sasz	azsd,ct1a		Amazon Shield (Sacred)
+aspe	spea,amaz		Amazon Spear
+qasp	aspe,ct2w		Amazon Spear (Sacred)
+geml	gem		Amber
+gema	gem		Amethyst
+amul	riam,sg&d	invamu1,invamu2,invamu3	Amulet
+qamu	amul	invamu1,invamu2,invamu3	Amulet (Sacred)
+aarm	armo,aaaa		Angelic Armor
+anxx	awea		Angelic Caster
+anrx	awea,anzz		Angelic Ranged Weapons
+atrs	aarm		Angelic Torso
+anzz	awea		Angelic Warrior
+awea	weap,aaaa		Angelic Weapon
+anx1	awea,anxx		Angelic Weapon 1H Caster
+an1x	awea,anzz		Angelic Weapon 1H Melee
+anx2	awea,anxx		Angelic Weapon 2H Caster
+an2x	awea,anzz		Angelic Weapon 2H Melee
+apot	poti		Antidote Potion
+armo	myor		Any Armor
+shld	armo,seco		Any Shield
+tors	armo		Armor
+ator	ct2a,atrs		Armor (Angelic)
+qtor	tors,ct2a		Armor (Sacred)
+assn	clas,fbox		Assassin Item
+nagi	mele,assn		Assassin Naginata
+snag	nagi,ct2w		Assassin Naginata (Sacred)
+ishd	shie		Assassin Shield
+sisd	ishd,ct1a		Assassin Shield (Sacred)
+ashd	shie,pala		Auric Shields
+qaur	ashd,ct1a		Auric Shields (Sacred)
+axe	mele,dbox		Axe
+aaxe	ct1w,an1x		Axe (Angelic)
+qaxe	axe,ct1w		Axe (Sacred)
+3xxx	phlm,pclb		Barb Helm and Pal 1H
+baxe	axe,barb		Barbarian Axe
+sbax	baxe,ct1w		Barbarian Axe (Sacred)
+barb	clas,fbox		Barbarian Item
+basd	shie,barb		Barbarian Shield
+saba	basd,ct1a		Barbarian Shield (Sacred)
+bswd	swor,barb		Barbarian Sword
+sbsd	bswd,ct1w		Barbarian Sword (Sacred)
+belt	armo,hlm1		Belt
+ablt	ct1a,aarm		Belt (Angelic)
+qblt	belt,ct1a		Belt (Sacred)
+gemp	gem		Bloodstone
+blun	mele		Blunt
+body	misc		Body Part
+book	misc		Book
+boot	armo,hlm1		Boots
+abot	ct1a,aarm		Boots (Angelic)
+qbot	boot,ct1a		Boots (Sacred)
+bow	miss		Bow
+qbow	bow,ct2w		Bow (Sacred)
+bowq	misl,riam		Bow Quiver
+qaqv	qmsl,riam		Bow Quiver (Sacred)
+astf	ct2w,anx2		Caster Staff (Angelic)
+araa	char		Challenge Charm 1
+arab	char		Challenge Charm 2
+arac	char		Challenge Charm 3
+arad	char		Challenge Charm 4
+arae	char		Challenge Charm 5
+araf	char		Challenge Charm 6
+arag	char		Challenge Charm 7
+char	misc	invch1,invch4,invch7	Charm
+gem0	gem		Chipped Gem
+circ	helm		Circlet
+qcic	circ,ct1a		Circlet (Sacred)
+cloa	tors,assn		Cloak
+club	blun,dbox		Club
+qclb	club,ct1w		Club (Sacred)
+comb	mele,thro		Combo Weapon
+scuu	thng		Corrupted Shard
+ct2x	sw&a		Craft Sacred Major
+ct2a	sarm,ct2x		Craft Sacred Major (Armor)
+ct2w	swea,ct2x		Craft Sacred Major (Weapon)
+ct1x	sw&a		Craft Sacred Minor
+ct1a	sarm,ct1x		Craft Sacred Minor (Armor)
+ct1w	swea,ct1x		Craft Sacred Minor (Weapon)
+xbow	miss		Crossbow
+axbw	ct2w,anrx		Crossbow (Angelic)
+qxbw	xbow,ct2w		Crossbow (Sacred)
+xboq	misl,riam		Crossbow Quiver
+qcqv	qmsl,riam		Crossbow Quiver (Sacred)
+crow	helm		Crown
+qcrn	qbhe		Crown (Sacred)
+crsd	swor		Crystal Sword
+qcrs	crsd,ct1w		Crystal Sword (Sacred)
+gemd	gem		Diamond
+dbow	bow,dbox		Druid Bow
+sdbw	dbow,ct2w		Druid Bow (Sacred)
+dbox	fbox		Druid Gift Box
+drui	clas		Druid Item
+dstf	staf,dbox		Druid Staff
+sdst	dstf,ct2w		Druid Staff (Sacred)
+/dsw	swor,my1w		Druid Sword (Mythical)
+elrx	elex		Elemental Ranged Weapons
+xrun	rune,gem		Elemental Rune
+el1x	elex		Elemental Weapon 1H Melee
+el2x	elex		Elemental Weapon 2H Melee
+elex	weap		Elemental Weapons
+elix	misc		Elixir
+geme	gem		Emerald
+erun	rune,gem		Enchanted Rune
+gem1	gem		Flawed Gem
+gem3	gem		Flawless Gem
+gem	sock		Gem
+gep2	gep1		Gem Pile 2
+gep3	gep2		Gem Pile 3
+gep4	gep3		Gem Pile 4
+glov	armo,hlm1		Gloves
+aglv	ct1a,aarm		Gloves (Angelic)
+qglv	glov,ct1a		Gloves (Sacred)
+gold	misc		Gold
+hamm	blun		Hammer
+qham	hamm		Hammer (Sacred)
+h2h	mele,assn		Hand to Hand
+qh2h	h2h,ct1w		Hand to Hand (Sacred)
+h2h2	h2h		Hand to Hand 2
+hpot	poti		Healing Potion
+hlm1	dcht		Helm
+ahlm	ct1a,aarm		Helm (Angelic)
+qhlm	helm,ct1a		Helm (Sacred)
+herb	misc		Herb
+horm	hamm		Horadric Malus
+jave	comb,spea		Javelin
+qjvn	jave,ct1w		Javelin (Sacred)
+jewl	sock,sg&d	invjw1,invjw2,invjw3,invjw4,invjw5,invjw6	Jewel
+key	misc		Key
+knif	mele,dbox		Knife
+aknf	ct1w,an1x		Knife (Angelic)
+qknf	knif,ct1w		Knife (Sacred)
+lcha	char	invch3,invch6,invch9	Large Charm
+cyc3	cycl	invch3,invch6,invch9	Large Cycle
+cyng	cyc3	invch3,invch6,invch9	Large Cycle Not Golden
+xxx5	amul		LoF Amu
+mace	blun		Mace
+amac	ct1w,an1x		Mace (Angelic)
+qmac	mace,ct1w		Mace (Sacred)
+mboq	bowq		Magic Bow Quiv
+mxbq	xboq		Magic Xbow Quiv
+mpot	poti		Mana Potion
+mw04	belt		Mastercrafted Belt
+mw01	bow		Mastercrafted Bow
+mw21	glov		Mastercrafted Gloves
+mw02	knif		Mastercrafted Knife
+mw03	staf		Mastercrafted Staff
+mw05	tkni		Mastercrafted Tknife
+mcha	char	invch2,invch5,invch8	Medium Charm
+cyc2	cycl	invch2,invch5,invch8	Medium Cycle
+kill	misc	invrin1,invrin2,invrin3,invrin4,invrin5	Mega Ring
+mele	weap		Melee Weapon
+misl	misc,myor		Missile
+qmsl	misl		Missile (Sacred)
+tpot	thro		Missile Potion
+miss	weap		Missile Weapon
+myor	dcht		Mystic Orbable
+####	mele		Mystic Sword
+nbox	fbox		Necro Gift Box
+2xxx	nxbw,nknf		Necro Xbow and Necro Knife
+1xxx	head,basd		Necro and Barb Class Shields
+necr	clas		Necromancer Item
+nknf	knif,nbox		Necromancer Knife
+snkf	nknf,ct1w		Necromancer Knife (Sacred)
+nscy	scyh,nbox		Necromancer Scythe
+snsy	nscy,ct2w		Necromancer Scythe (Sacred)
+nstf	staf,nbox		Necromancer Staff
+snst	nstf,ct2w		Necromancer Staff (Sacred)
+nxbw	xbow,nbox		Necromancer Xbow
+snxb	nxbw,ct2w		Necromancer Xbow (Sacred)
+helm	armo,hlm1		New Helm
+gemq	gem		Onyx
+orb	mele,sorc		Orb
+qorb	orb,ct1w		Orb (Sacred)
+pbox	fbox		Pala Gift Box
+pclb	club		Paladin Club
+spcb	pclb,ct1w		Paladin Club (Sacred)
+pham	hamm		Paladin Hammer
+sphm	pham,ct2w		Paladin Hammer (Sacred)
+pzhm	helm		Paladin Helm
+sphz	pzhm,ct1a		Paladin Helm (Sacred)
+pala	clas		Paladin Item
+pmac	mace		Paladin Mace
+spmc	pmac,ct1w		Paladin Mace (Sacred)
+pspe	spea		Paladin Spear
+spsp	pspe,ct2w		Paladin Spear (Sacred)
+pelt	helm,drui		Pelt
+qplt	pelt,ct1a		Pelt (Sacred)
+gem4	gem		Perfect Gem
+play	misc		Player Body Part
+pole	mele		Polearm
+qpol	pole,ct2w		Polearm (Sacred)
+prsh	thng		Portable Shrine
+poti	misc		Potion
+phlm	helm,barb		Primal Helm
+qphm	phlm,ct1a		Primal Helm (Sacred)
+gemx	gem		Rainbow Gem
+rpot	hpot,mpot		Rejuv Potion
+reli	grtz	relic01,relic02,relic03,relic04,relic05,relic06	Relic
+grtz	char		Reward Charm
+ring	riam,sg&d	invrin1,invrin2,invrin3,invrin4,invrin5	Ring
+qrin	ring	invrin1,invrin2,invrin3,invrin4,invrin5	Ring (Sacred)
+riam	misc,myor		Rings and Amulets
+gemr	gem		Ruby
+rune	sock		Rune
+xxx4	misc		SAmu
+xxx2	bow		SBow
+xxx3	mele		SStaff
+xxx1	swor		SSword
+sarm	ssgl		Sacred Armor
+#bow	bow		Sacred Bow
+ssgl	sign		Sacred Group
+swea	ssgl		Sacred Weapon
+sw&a	ssgl		Sacred Weapons and Armor
+gems	gem		Sapphire
+scep	rod		Scepter
+ascp	ct1w,anx1		Scepter (Angelic)
+qscp	scep,ct1w		Scepter (Sacred)
+sdgn	dsgn	book01,book02,book05,book06,book07,book08	Scosglen Design
+scro	misc		Scroll
+summ	char		Scroll of Summoning
+scyh	pole		Scythe
+qscy	scyh,ct2w		Scythe (Sacred)
+shie	shld		Shield
+ashi	ct1a,aarm		Shield (Angelic)
+qshi	shie,ct1a		Shield (Sacred)
+shco	thng		Shrine Container
+sg&d	dcht,ssgl		Siggable And Shardable
+gemz	gem		Skull
+scha	char	invch1,invch4,invch7	Small Charm
+cyc1	cycl	invch1,invch4,invch7	Small Cycle
+sock	misc		Socket Filler
+sbox	fbox		Sorc Gift Box
+scrd	mele,sbox		Sorceress Crystal Sword
+sscd	scrd,ct1w		Sorceress Crystal Sword (Sacred)
+sorc	clas,sbox		Sorceress Item
+stor	tors		Sorceress Torso
+sstr	stor,ct2a		Sorceress Torso (Sacred)
+spea	mele		Spear
+aspr	ct2w,an2x		Spear (Angelic)
+qspe	spea,ct2w		Spear (Sacred)
+bhlm	helm		Special Helm
+qbhe	qhlm		Special Helm (Sacred)
+bshi	shie		Special Shield
+qbon	qshi		Special Shield (Sacred)
+staf	rod		Staff
+qstf	staf,ct2w		Staff (Sacred)
+wp01	mele		Staff of Herding TMP
+spot	poti		Stamina Potion
+gem2	gem		Standard Gem
+rod	blun		Staves And Rods
+swor	mele		Sword
+aswd	ct1w,an1x		Sword (Angelic)
+qswd	swor,ct1w		Sword (Sacred)
+woot	ques		Thanks For Playing
+wpot	poti		Thawing Potion
+taxe	comb,axe		Throwing Axe
+qtax	taxe,ct1w		Throwing Axe (Sacred)
+tkni	comb,knif		Throwing Knife
+qtkn	tkni,ct1w		Throwing Knife (Sacred)
+thro	weap		Thrown Weapon
+gemt	gem		Topaz
+torc	misc		Torch
+tcur	amul	invamu1,invamu2,invamu3	Trigger Curse Item
+gemo	gem		Turqoise
+head	shie,necr		Voodoo Heads
+qhed	head,ct1a		Voodoo Heads (Sacred)
+wand	rod		Wand
+qwnd	wand,ct1w		Wand (Sacred)
+astw	ct2w,an2x		Warrior Staff (Angelic)
+weap	myor		Weapon
+wrtl	mace		Wirts Leg
+###2	amul		Yshari Amulet
+###3	qtor		Yshari Armor
+###6	qblt		Yshari Belt
+###8	qbot		Yshari Boots
+###7	qglv		Yshari Gloves
+###5	qhlm		Yshari Helm
+###1	ring	lab_rn1,lab_rn2	Yshari Ring
+###4	qshi		Yshari Shield
