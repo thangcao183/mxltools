@@ -453,6 +453,38 @@ ItemInfo *newRing = engine.createItem(tmpl);
 
 *See `ITEM_CREATION_GUIDE.md` for complete implementation details.*
 
+## 🌟 Unique Items System
+
+MedianXL Offline Tools có hệ thống **Unique Items** phức tạp để quản lý các item đặc biệt với tên riêng và properties cố định.
+
+### Unique Items Architecture
+```cpp
+struct UniqueItemInfo : public SetOrUniqueItemInfo {
+    QString name;          // Unique item name (e.g., "The Stone of Jordan")
+    quint16 rlvl, ilvl;   // Required level, Internal level  
+    QByteArray imageName;  // Custom image file
+};
+```
+
+### Database Management
+- **Database Loading** - Load từ compressed `uniques.dat` file
+- **ID-Based Lookup** - Sử dụng `setOrUniqueId` (15-bit) để lookup
+- **Quality = 7** - Unique items có quality value = 7  
+- **Golden Color** - Hiển thị màu vàng trong UI
+
+### Key Integration Points
+- **ItemParser** - Parse unique ID từ bit string (15 bits)
+- **Property Editor** - Special handling cho unique item modifications
+- **Item Creation** - Template system cho tạo unique items
+- **Validation** - Comprehensive validation cho unique item integrity
+
+### Special MedianXL Features
+- **Uber Charms** - Special unique charm types
+- **Tiered vs Sacred** - Item tier classification system
+- **Custom Images** - Unique items có custom image files
+
+*See `UNIQUE_ITEMS_GUIDE.md` for complete unique items implementation details.*
+
 ---
 
 **Document Created**: September 30, 2025  
