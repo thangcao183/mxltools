@@ -126,14 +126,81 @@ void PropertyEditor::setItem(ItemInfo *item)
     _updatingUI = true;
     
     // Add item properties (existing only)
+#ifndef QT_NO_DEBUG
+    qDebug() << "PropertyEditor: Loading" << _item->props.size() << "item properties";
+#endif
     for (auto it = _item->props.constBegin(); it != _item->props.constEnd(); ++it) {
+        // Skip properties with zero value or missing descFunc (same as PropertiesDisplayManager::propertyDisplay)
+        ItemPropertyTxt *propTxt = ItemDataBase::Properties()->value(it.key());
+        if (it.value()->value == 0 || !propTxt || !propTxt->descFunc) {
+#ifndef QT_NO_DEBUG
+            QString reason = it.value()->value == 0 ? "zero value" : 
+                           (!propTxt ? "missing propTxt" : "missing descFunc");
+            qDebug() << QString("PropertyEditor: Skipping item prop ID=%1 (%2)")
+                       .arg(it.key()).arg(reason);
+#endif
+            continue;
+        }
+        
+        // Debug: Log all properties being loaded, especially ID=0 (Strength)
+#ifndef QT_NO_DEBUG  
+        if (it.key() == 0) {
+            qDebug() << QString("PropertyEditor: !!! Found Strength prop ID=0, value=%1, param=%2")
+                       .arg(it.value()->value).arg(it.value()->param);
+        }
+#endif
+        
         int displayValue = getDisplayValueForProperty(it.key(), it.value());
-        addPropertyRow(it.key(), displayValue, it.value()->param, false);
+#ifndef QT_NO_DEBUG
+        qDebug() << QString("PropertyEditor: Item prop ID=%1, value=%2, param=%3, displayValue=%4")
+                   .arg(it.key()).arg(it.value()->value).arg(it.value()->param).arg(displayValue);
+#endif
+        addPropertyRow(it.key(), displayValue, it.value()->param, false, false);
+    }
+    
+    // Add runeword properties (existing only)
+#ifndef QT_NO_DEBUG
+    qDebug() << "PropertyEditor: Loading" << _item->rwProps.size() << "runeword properties";
+#endif
+    for (auto it = _item->rwProps.constBegin(); it != _item->rwProps.constEnd(); ++it) {
+        // Skip runeword properties with zero value or missing descFunc (same as PropertiesDisplayManager::propertyDisplay)
+        ItemPropertyTxt *propTxt = ItemDataBase::Properties()->value(it.key());
+        if (it.value()->value == 0 || !propTxt || !propTxt->descFunc) {
+#ifndef QT_NO_DEBUG
+            QString reason = it.value()->value == 0 ? "zero value" : 
+                           (!propTxt ? "missing propTxt" : "missing descFunc");
+            qDebug() << QString("PropertyEditor: Skipping RW prop ID=%1 (%2)")
+                       .arg(it.key()).arg(reason);
+#endif
+            continue;
+        }
+        
+        int displayValue = getDisplayValueForProperty(it.key(), it.value());
+#ifndef QT_NO_DEBUG
+        qDebug() << QString("PropertyEditor: RW prop ID=%1, value=%2, param=%3, displayValue=%4")
+                   .arg(it.key()).arg(it.value()->value).arg(it.value()->param).arg(displayValue);
+#endif
+        addPropertyRow(it.key(), displayValue, it.value()->param, false, true);
     }
     
     _updatingUI = false;
     
-    _statusLabel->setText(tr("Loaded %1 existing properties (modify values only)").arg(_item->props.size()));
+    // Count actual loaded properties (excluding zero values and missing descFunc)
+    int loadedItemProps = 0;
+    for (auto it = _item->props.constBegin(); it != _item->props.constEnd(); ++it) {
+        ItemPropertyTxt *propTxt = ItemDataBase::Properties()->value(it.key());
+        if (it.value()->value != 0 && propTxt && propTxt->descFunc) loadedItemProps++;
+    }
+    
+    int loadedRwProps = 0;
+    for (auto it = _item->rwProps.constBegin(); it != _item->rwProps.constEnd(); ++it) {
+        ItemPropertyTxt *propTxt = ItemDataBase::Properties()->value(it.key());
+        if (it.value()->value != 0 && propTxt && propTxt->descFunc) loadedRwProps++;
+    }
+    
+    int totalLoadedProps = loadedItemProps + loadedRwProps;
+    _statusLabel->setText(tr("Loaded %1 existing properties (%2 item + %3 runeword) - modify values only")
+                         .arg(totalLoadedProps).arg(loadedItemProps).arg(loadedRwProps));
 }
 
 void PropertyEditor::clear()
@@ -148,6 +215,7 @@ void PropertyEditor::clear()
         delete row->parameterLabel;
         delete row->removeButton;
         delete row->warningLabel;
+        delete row->typeLabel;
         delete row;
     }
     _propertyRows.clear();
@@ -206,7 +274,7 @@ void PropertyEditor::populatePropertyCombo(QComboBox *combo)
     }
     
     // Restore selection
-    if (currentId > 0) {
+    if (currentId >= 0) {
         int index = combo->findData(currentId);
         if (index >= 0) {
             combo->setCurrentIndex(index);
@@ -220,13 +288,14 @@ void PropertyEditor::addProperty()
     addPropertyRow();
 }
 
-void PropertyEditor::addPropertyRow(int propertyId, int value, quint32 parameter, bool isNew)
+void PropertyEditor::addPropertyRow(int propertyId, int value, quint32 parameter, bool isNew, bool isRunewordProperty)
 {
     PropertyEditorRow *row = new PropertyEditorRow;
     row->isNew = isNew;
     row->originalPropertyId = propertyId;
     row->originalValue = value;
     row->originalParameter = parameter;
+    row->isRunewordProperty = isRunewordProperty;
     
     // Create layout for this row
     QHBoxLayout *rowLayout = new QHBoxLayout;
@@ -238,7 +307,7 @@ void PropertyEditor::addPropertyRow(int propertyId, int value, quint32 parameter
     row->propertyCombo->setMinimumWidth(200);
     populatePropertyCombo(row->propertyCombo);
     
-    if (propertyId > 0) {
+    if (propertyId >= 0) {
         int index = row->propertyCombo->findData(propertyId);
         if (index >= 0) row->propertyCombo->setCurrentIndex(index);
         
@@ -295,7 +364,18 @@ void PropertyEditor::addPropertyRow(int propertyId, int value, quint32 parameter
     row->warningLabel->setStyleSheet("QLabel { color: red; font-weight: bold; }");
     row->warningLabel->hide();
     
+    // Type label (Item/RW indicator)
+    row->typeLabel = new QLabel(isRunewordProperty ? tr("RW") : tr("Item"));
+    row->typeLabel->setStyleSheet(isRunewordProperty ? 
+                                 "QLabel { color: green; font-weight: bold; }" :
+                                 "QLabel { color: blue; font-weight: bold; }");
+    row->typeLabel->setMinimumWidth(35);
+    row->typeLabel->setToolTip(isRunewordProperty ? 
+                              tr("Runeword Property") : 
+                              tr("Item Property"));
+    
     // Add to layout
+    rowLayout->addWidget(row->typeLabel);
     rowLayout->addWidget(new QLabel(tr("Property:")));
     rowLayout->addWidget(row->propertyCombo, 1);
     rowLayout->addWidget(new QLabel(tr("Value:")));
@@ -366,7 +446,7 @@ void PropertyEditor::updatePropertyRow(PropertyEditorRow *row)
     _updatingUI = true;
     
     int propertyId = row->propertyCombo->currentData().toInt();
-    if (propertyId <= 0) {
+    if (propertyId < 0) {
         row->parameterLabel->setVisible(false);
         row->parameterSpinBox->setVisible(false);
         _updatingUI = false;
@@ -412,25 +492,62 @@ void PropertyEditor::updatePropertyRow(PropertyEditorRow *row)
 void PropertyEditor::validatePropertyValue(PropertyEditorRow *row)
 {
     row->warningLabel->hide();
+    row->warningLabel->setStyleSheet("QLabel { color: red; font-weight: bold; }"); // Reset to default warning style
     
     int propertyId = row->propertyCombo->currentData().toInt();
-    if (propertyId <= 0) return;
+    if (propertyId < 0) return;
     
     ItemPropertyTxt *propTxt = ItemDataBase::Properties()->value(propertyId);
     if (!propTxt) return;
     
-    // Check for duplicate properties
-    int count = 0;
-    for (const PropertyEditorRow *otherRow : _propertyRows) {
-        if (otherRow->propertyCombo->currentData().toInt() == propertyId) {
-            count++;
+    // Check for duplicate properties within the same type (item or runeword)
+    // Properties are considered duplicates only if they have same ID, same parameter, and same type
+    // Note: Properties with same ID but different parameters are legitimate (e.g., different skills)
+    // Note: Same property in item and runeword can be merged, so they're not duplicates
+    bool allowMultiple = isPropertyAllowedMultipleTimes(propertyId);
+    
+    if (!allowMultiple) {
+        quint32 currentParam = row->parameterSpinBox->value();
+        int count = 0;
+        
+        for (const PropertyEditorRow *otherRow : _propertyRows) {
+            if (otherRow->propertyCombo->currentData().toInt() == propertyId &&
+                otherRow->isRunewordProperty == row->isRunewordProperty &&
+                otherRow->parameterSpinBox->value() == currentParam) {
+                count++;
+            }
+        }
+        
+        if (count > 1) {
+            QString duplicateType = row->isRunewordProperty ? tr("runeword") : tr("item");
+            row->warningLabel->setText(tr("Duplicate %1 property (same param)!").arg(duplicateType));
+            row->warningLabel->show();
+            return;
         }
     }
     
-    if (count > 1) {
-        row->warningLabel->setText(tr("Duplicate!"));
+    // Check if this property will be merged with another one during display
+    // (same property ID and parameter but different type - item vs runeword)
+    bool willBeMerged = false;
+    quint32 currentParam = row->parameterSpinBox->value();
+    
+    for (const PropertyEditorRow *otherRow : _propertyRows) {
+        if (otherRow != row &&
+            otherRow->propertyCombo->currentData().toInt() == propertyId &&
+            otherRow->isRunewordProperty != row->isRunewordProperty &&
+            otherRow->parameterSpinBox->value() == currentParam) {
+            willBeMerged = true;
+            break;
+        }
+    }
+    
+    if (willBeMerged) {
+        QString mergeInfo = tr("Will merge with %1 property in display")
+                           .arg(row->isRunewordProperty ? tr("item") : tr("runeword"));
+        row->warningLabel->setText(mergeInfo);
+        row->warningLabel->setStyleSheet("QLabel { color: blue; font-weight: bold; }");
         row->warningLabel->show();
-        return;
+        // Don't return - this is just informational
     }
     
     // Get current values
@@ -726,6 +843,27 @@ int PropertyEditor::getStorageValueFromDisplay(int propertyId, int displayValue)
     }
 }
 
+bool PropertyEditor::isPropertyAllowedMultipleTimes(int propertyId) const
+{
+    // Some properties can legitimately appear multiple times on the same item
+    switch (propertyId) {
+        case Enums::ItemProperties::ChargedSkill:
+            // Charged skills can have multiple instances (different skills)
+            return true;
+            
+        case Enums::ItemProperties::Oskill:
+        case Enums::ItemProperties::ClassOnlySkill:
+            // Oskills can have multiple instances (different skills)
+            return true;
+            
+        // Add other properties that can appear multiple times as needed
+        // Examples might include: specific aura grants, specific proc chances, etc.
+        
+        default:
+            return false;
+    }
+}
+
 void PropertyEditor::backupOriginalProperties()
 {
     if (!_item) return;
@@ -842,7 +980,7 @@ void PropertyEditor::applyPropertyChanges()
     QStringList validationErrors;
     for (const PropertyEditorRow *row : _propertyRows) {
         int propertyId = row->propertyCombo->currentData().toInt();
-        if (propertyId <= 0) continue;
+        if (propertyId < 0) continue;
         
         int value = row->valueSpinBox->value();
         quint32 parameter = row->parameterSpinBox->value();
@@ -870,15 +1008,22 @@ void PropertyEditor::applyPropertyChanges()
     
     for (const PropertyEditorRow *row : _propertyRows) {
         int propertyId = row->propertyCombo->currentData().toInt();
-        if (propertyId <= 0) continue;
+        if (propertyId < 0) continue;
         
         int displayValue = row->valueSpinBox->value();
         quint32 newParameter = row->parameterSpinBox->value();
         
-        // Find existing property in item
+        // Find existing property in item (check both props and rwProps)
         ItemProperty *existingProp = _item->props.value(propertyId);
+        bool isRunewordProperty = false;
+        
         if (!existingProp) {
-            // Property doesn't exist - we'll skip adding new properties for safety
+            existingProp = _item->rwProps.value(propertyId);
+            isRunewordProperty = true;
+        }
+        
+        if (!existingProp) {
+            // Property doesn't exist in either props or rwProps - skip for safety
             continue;
         }
         
@@ -940,6 +1085,14 @@ void PropertyEditor::revertChanges()
     
     for (auto it = _originalProperties.constBegin(); it != _originalProperties.constEnd(); ++it) {
         _item->props.insert(it.key(), new ItemProperty(*it.value()));
+    }
+    
+    // Restore original runeword properties
+    qDeleteAll(_item->rwProps);
+    _item->rwProps.clear();
+    
+    for (auto it = _originalRwProperties.constBegin(); it != _originalRwProperties.constEnd(); ++it) {
+        _item->rwProps.insert(it.key(), new ItemProperty(*it.value()));
     }
     
     // Reload the editor

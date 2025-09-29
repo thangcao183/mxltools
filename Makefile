@@ -37,7 +37,7 @@ MOVE          = mv -f
 TAR           = tar -cf
 COMPRESS      = gzip -9f
 DISTNAME      = MedianXLOfflineTools0.6.6
-DISTDIR = /home/wolf/CODE/C/MedianXLOfflineTools/obj/MedianXLOfflineTools0.6.6
+DISTDIR = /home/wolf/CODE/C/mxltools/obj/MedianXLOfflineTools0.6.6
 LINK          = g++
 LFLAGS        = -Wl,-O1 -Wl,-rpath,/usr/lib64 -Wl,-rpath-link,/usr/lib64
 LIBS          = $(SUBLIBS) /usr/lib64/libQt6Widgets.so /usr/lib64/libQt6Gui.so /usr/lib64/libGLX.so /usr/lib64/libOpenGL.so /usr/lib64/libQt6Network.so /usr/lib64/libQt6Concurrent.so /usr/lib64/libQt6Core.so -lpthread -lGLX -lOpenGL   
@@ -378,6 +378,7 @@ DIST          = /usr/lib64/qt6/mkspecs/features/spec_pre.prf \
 		/usr/lib64/qt6/mkspecs/features/qt_config.prf \
 		/usr/lib64/qt6/mkspecs/linux-g++/qmake.conf \
 		/usr/lib64/qt6/mkspecs/features/spec_post.prf \
+		.qmake.stash \
 		/usr/lib64/qt6/mkspecs/features/exclusive_builds.prf \
 		/usr/lib64/qt6/mkspecs/features/toolchain.prf \
 		/usr/lib64/qt6/mkspecs/features/default_pre.prf \
@@ -691,6 +692,7 @@ Makefile: MedianXLOfflineTools.pro /usr/lib64/qt6/mkspecs/linux-g++/qmake.conf /
 		/usr/lib64/qt6/mkspecs/features/qt_config.prf \
 		/usr/lib64/qt6/mkspecs/linux-g++/qmake.conf \
 		/usr/lib64/qt6/mkspecs/features/spec_post.prf \
+		.qmake.stash \
 		/usr/lib64/qt6/mkspecs/features/exclusive_builds.prf \
 		/usr/lib64/qt6/mkspecs/features/toolchain.prf \
 		/usr/lib64/qt6/mkspecs/features/default_pre.prf \
@@ -926,6 +928,7 @@ Makefile: MedianXLOfflineTools.pro /usr/lib64/qt6/mkspecs/linux-g++/qmake.conf /
 /usr/lib64/qt6/mkspecs/features/qt_config.prf:
 /usr/lib64/qt6/mkspecs/linux-g++/qmake.conf:
 /usr/lib64/qt6/mkspecs/features/spec_post.prf:
+.qmake.stash:
 /usr/lib64/qt6/mkspecs/features/exclusive_builds.prf:
 /usr/lib64/qt6/mkspecs/features/toolchain.prf:
 /usr/lib64/qt6/mkspecs/features/default_pre.prf:
@@ -1142,24 +1145,24 @@ moc/moc_medianxlofflinetools.cpp: src/medianxlofflinetools.h \
 		src/resurrectpenaltydialog.h \
 		moc/moc_predefs.h \
 		/usr/lib64/qt6/libexec/moc
-	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/MedianXLOfflineTools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/MedianXLOfflineTools -I/home/wolf/CODE/C/MedianXLOfflineTools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/medianxlofflinetools.h -o moc/moc_medianxlofflinetools.cpp
+	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/mxltools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/mxltools -I/home/wolf/CODE/C/mxltools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/medianxlofflinetools.h -o moc/moc_medianxlofflinetools.cpp
 
 moc/moc_resurrectpenaltydialog.cpp: src/resurrectpenaltydialog.h \
 		moc/moc_predefs.h \
 		/usr/lib64/qt6/libexec/moc
-	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/MedianXLOfflineTools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/MedianXLOfflineTools -I/home/wolf/CODE/C/MedianXLOfflineTools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/resurrectpenaltydialog.h -o moc/moc_resurrectpenaltydialog.cpp
+	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/mxltools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/mxltools -I/home/wolf/CODE/C/mxltools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/resurrectpenaltydialog.h -o moc/moc_resurrectpenaltydialog.cpp
 
 moc/moc_qd2charrenamer.cpp: src/qd2charrenamer.h \
 		moc/moc_predefs.h \
 		/usr/lib64/qt6/libexec/moc
-	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/MedianXLOfflineTools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/MedianXLOfflineTools -I/home/wolf/CODE/C/MedianXLOfflineTools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/qd2charrenamer.h -o moc/moc_qd2charrenamer.cpp
+	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/mxltools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/mxltools -I/home/wolf/CODE/C/mxltools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/qd2charrenamer.h -o moc/moc_qd2charrenamer.cpp
 
 moc/moc_enums.cpp: src/enums.h \
 		src/helpers.h \
 		src/colorsmanager.h \
 		moc/moc_predefs.h \
 		/usr/lib64/qt6/libexec/moc
-	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/MedianXLOfflineTools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/MedianXLOfflineTools -I/home/wolf/CODE/C/MedianXLOfflineTools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/enums.h -o moc/moc_enums.cpp
+	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/mxltools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/mxltools -I/home/wolf/CODE/C/mxltools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/enums.h -o moc/moc_enums.cpp
 
 moc/moc_propertiesviewerwidget.cpp: src/propertiesviewerwidget.h \
 		src/structs.h \
@@ -1169,7 +1172,7 @@ moc/moc_propertiesviewerwidget.cpp: src/propertiesviewerwidget.h \
 		src/reversebitwriter.h \
 		moc/moc_predefs.h \
 		/usr/lib64/qt6/libexec/moc
-	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/MedianXLOfflineTools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/MedianXLOfflineTools -I/home/wolf/CODE/C/MedianXLOfflineTools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/propertiesviewerwidget.h -o moc/moc_propertiesviewerwidget.cpp
+	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/mxltools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/mxltools -I/home/wolf/CODE/C/mxltools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/propertiesviewerwidget.h -o moc/moc_propertiesviewerwidget.cpp
 
 moc/moc_itemsviewerdialog.cpp: src/itemsviewerdialog.h \
 		src/structs.h \
@@ -1179,7 +1182,7 @@ moc/moc_itemsviewerdialog.cpp: src/itemsviewerdialog.h \
 		src/reversebitwriter.h \
 		moc/moc_predefs.h \
 		/usr/lib64/qt6/libexec/moc
-	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/MedianXLOfflineTools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/MedianXLOfflineTools -I/home/wolf/CODE/C/MedianXLOfflineTools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/itemsviewerdialog.h -o moc/moc_itemsviewerdialog.cpp
+	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/mxltools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/mxltools -I/home/wolf/CODE/C/mxltools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/itemsviewerdialog.h -o moc/moc_itemsviewerdialog.cpp
 
 moc/moc_itemstoragetablemodel.cpp: src/itemstoragetablemodel.h \
 		src/structs.h \
@@ -1189,12 +1192,12 @@ moc/moc_itemstoragetablemodel.cpp: src/itemstoragetablemodel.h \
 		src/reversebitwriter.h \
 		moc/moc_predefs.h \
 		/usr/lib64/qt6/libexec/moc
-	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/MedianXLOfflineTools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/MedianXLOfflineTools -I/home/wolf/CODE/C/MedianXLOfflineTools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/itemstoragetablemodel.h -o moc/moc_itemstoragetablemodel.cpp
+	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/mxltools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/mxltools -I/home/wolf/CODE/C/mxltools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/itemstoragetablemodel.h -o moc/moc_itemstoragetablemodel.cpp
 
 moc/moc_itemstoragetableview.cpp: src/itemstoragetableview.h \
 		moc/moc_predefs.h \
 		/usr/lib64/qt6/libexec/moc
-	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/MedianXLOfflineTools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/MedianXLOfflineTools -I/home/wolf/CODE/C/MedianXLOfflineTools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/itemstoragetableview.h -o moc/moc_itemstoragetableview.cpp
+	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/mxltools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/mxltools -I/home/wolf/CODE/C/mxltools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/itemstoragetableview.h -o moc/moc_itemstoragetableview.cpp
 
 moc/moc_itemspropertiessplitter.cpp: src/itemspropertiessplitter.h \
 		src/structs.h \
@@ -1204,7 +1207,7 @@ moc/moc_itemspropertiessplitter.cpp: src/itemspropertiessplitter.h \
 		src/reversebitwriter.h \
 		moc/moc_predefs.h \
 		/usr/lib64/qt6/libexec/moc
-	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/MedianXLOfflineTools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/MedianXLOfflineTools -I/home/wolf/CODE/C/MedianXLOfflineTools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/itemspropertiessplitter.h -o moc/moc_itemspropertiessplitter.cpp
+	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/mxltools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/mxltools -I/home/wolf/CODE/C/mxltools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/itemspropertiessplitter.h -o moc/moc_itemspropertiessplitter.cpp
 
 moc/moc_finditemsdialog.cpp: src/finditemsdialog.h \
 		src/findresultswidget.h \
@@ -1216,7 +1219,7 @@ moc/moc_finditemsdialog.cpp: src/finditemsdialog.h \
 		src/reversebitwriter.h \
 		moc/moc_predefs.h \
 		/usr/lib64/qt6/libexec/moc
-	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/MedianXLOfflineTools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/MedianXLOfflineTools -I/home/wolf/CODE/C/MedianXLOfflineTools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/finditemsdialog.h -o moc/moc_finditemsdialog.cpp
+	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/mxltools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/mxltools -I/home/wolf/CODE/C/mxltools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/finditemsdialog.h -o moc/moc_finditemsdialog.cpp
 
 moc/moc_findresultswidget.cpp: src/findresultswidget.h \
 		src/showselecteditemdelegate.h \
@@ -1227,7 +1230,7 @@ moc/moc_findresultswidget.cpp: src/findresultswidget.h \
 		src/reversebitwriter.h \
 		moc/moc_predefs.h \
 		/usr/lib64/qt6/libexec/moc
-	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/MedianXLOfflineTools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/MedianXLOfflineTools -I/home/wolf/CODE/C/MedianXLOfflineTools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/findresultswidget.h -o moc/moc_findresultswidget.cpp
+	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/mxltools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/mxltools -I/home/wolf/CODE/C/mxltools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/findresultswidget.h -o moc/moc_findresultswidget.cpp
 
 moc/moc_application.cpp: src/application.h \
 		src/medianxlofflinetools.h \
@@ -1241,12 +1244,12 @@ moc/moc_application.cpp: src/application.h \
 		qtsingleapplication/qtsingleapplication.h \
 		moc/moc_predefs.h \
 		/usr/lib64/qt6/libexec/moc
-	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/MedianXLOfflineTools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/MedianXLOfflineTools -I/home/wolf/CODE/C/MedianXLOfflineTools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/application.h -o moc/moc_application.cpp
+	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/mxltools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/mxltools -I/home/wolf/CODE/C/mxltools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/application.h -o moc/moc_application.cpp
 
 moc/moc_experienceindicatorgroupbox.cpp: src/experienceindicatorgroupbox.h \
 		moc/moc_predefs.h \
 		/usr/lib64/qt6/libexec/moc
-	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/MedianXLOfflineTools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/MedianXLOfflineTools -I/home/wolf/CODE/C/MedianXLOfflineTools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/experienceindicatorgroupbox.h -o moc/moc_experienceindicatorgroupbox.cpp
+	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/mxltools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/mxltools -I/home/wolf/CODE/C/mxltools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/experienceindicatorgroupbox.h -o moc/moc_experienceindicatorgroupbox.cpp
 
 moc/moc_plugyitemssplitter.cpp: src/plugyitemssplitter.h \
 		src/itemspropertiessplitter.h \
@@ -1257,7 +1260,7 @@ moc/moc_plugyitemssplitter.cpp: src/plugyitemssplitter.h \
 		src/reversebitwriter.h \
 		moc/moc_predefs.h \
 		/usr/lib64/qt6/libexec/moc
-	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/MedianXLOfflineTools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/MedianXLOfflineTools -I/home/wolf/CODE/C/MedianXLOfflineTools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/plugyitemssplitter.h -o moc/moc_plugyitemssplitter.cpp
+	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/mxltools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/mxltools -I/home/wolf/CODE/C/mxltools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/plugyitemssplitter.h -o moc/moc_plugyitemssplitter.cpp
 
 moc/moc_gearitemssplitter.cpp: src/gearitemssplitter.h \
 		src/itemspropertiessplitter.h \
@@ -1268,17 +1271,17 @@ moc/moc_gearitemssplitter.cpp: src/gearitemssplitter.h \
 		src/reversebitwriter.h \
 		moc/moc_predefs.h \
 		/usr/lib64/qt6/libexec/moc
-	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/MedianXLOfflineTools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/MedianXLOfflineTools -I/home/wolf/CODE/C/MedianXLOfflineTools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/gearitemssplitter.h -o moc/moc_gearitemssplitter.cpp
+	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/mxltools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/mxltools -I/home/wolf/CODE/C/mxltools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/gearitemssplitter.h -o moc/moc_gearitemssplitter.cpp
 
 moc/moc_kexpandablegroupbox.cpp: src/kexpandablegroupbox.h \
 		moc/moc_predefs.h \
 		/usr/lib64/qt6/libexec/moc
-	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/MedianXLOfflineTools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/MedianXLOfflineTools -I/home/wolf/CODE/C/MedianXLOfflineTools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/kexpandablegroupbox.h -o moc/moc_kexpandablegroupbox.cpp
+	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/mxltools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/mxltools -I/home/wolf/CODE/C/mxltools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/kexpandablegroupbox.h -o moc/moc_kexpandablegroupbox.cpp
 
 moc/moc_showselecteditemdelegate.cpp: src/showselecteditemdelegate.h \
 		moc/moc_predefs.h \
 		/usr/lib64/qt6/libexec/moc
-	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/MedianXLOfflineTools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/MedianXLOfflineTools -I/home/wolf/CODE/C/MedianXLOfflineTools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/showselecteditemdelegate.h -o moc/moc_showselecteditemdelegate.cpp
+	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/mxltools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/mxltools -I/home/wolf/CODE/C/mxltools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/showselecteditemdelegate.h -o moc/moc_showselecteditemdelegate.cpp
 
 moc/moc_disenchantpreviewdialog.cpp: src/disenchantpreviewdialog.h \
 		src/showselecteditemdelegate.h \
@@ -1289,19 +1292,19 @@ moc/moc_disenchantpreviewdialog.cpp: src/disenchantpreviewdialog.h \
 		src/reversebitwriter.h \
 		moc/moc_predefs.h \
 		/usr/lib64/qt6/libexec/moc
-	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/MedianXLOfflineTools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/MedianXLOfflineTools -I/home/wolf/CODE/C/MedianXLOfflineTools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/disenchantpreviewdialog.h -o moc/moc_disenchantpreviewdialog.cpp
+	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/mxltools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/mxltools -I/home/wolf/CODE/C/mxltools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/disenchantpreviewdialog.h -o moc/moc_disenchantpreviewdialog.cpp
 
 moc/moc_progressbarmodal.cpp: src/progressbarmodal.hpp \
 		moc/moc_predefs.h \
 		/usr/lib64/qt6/libexec/moc
-	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/MedianXLOfflineTools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/MedianXLOfflineTools -I/home/wolf/CODE/C/MedianXLOfflineTools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/progressbarmodal.hpp -o moc/moc_progressbarmodal.cpp
+	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/mxltools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/mxltools -I/home/wolf/CODE/C/mxltools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/progressbarmodal.hpp -o moc/moc_progressbarmodal.cpp
 
 moc/moc_itemnamestreewidget.cpp: src/itemnamestreewidget.hpp \
 		src/helpers.h \
 		src/colorsmanager.h \
 		moc/moc_predefs.h \
 		/usr/lib64/qt6/libexec/moc
-	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/MedianXLOfflineTools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/MedianXLOfflineTools -I/home/wolf/CODE/C/MedianXLOfflineTools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/itemnamestreewidget.hpp -o moc/moc_itemnamestreewidget.cpp
+	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/mxltools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/mxltools -I/home/wolf/CODE/C/mxltools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/itemnamestreewidget.hpp -o moc/moc_itemnamestreewidget.cpp
 
 moc/moc_stashsortingoptionsdialog.cpp: src/stashsortingoptionsdialog.h \
 		src/structs.h \
@@ -1311,12 +1314,12 @@ moc/moc_stashsortingoptionsdialog.cpp: src/stashsortingoptionsdialog.h \
 		src/reversebitwriter.h \
 		moc/moc_predefs.h \
 		/usr/lib64/qt6/libexec/moc
-	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/MedianXLOfflineTools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/MedianXLOfflineTools -I/home/wolf/CODE/C/MedianXLOfflineTools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/stashsortingoptionsdialog.h -o moc/moc_stashsortingoptionsdialog.cpp
+	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/mxltools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/mxltools -I/home/wolf/CODE/C/mxltools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/stashsortingoptionsdialog.h -o moc/moc_stashsortingoptionsdialog.cpp
 
 moc/moc_helpwindowdisplaymanager.cpp: src/helpwindowdisplaymanager.h \
 		moc/moc_predefs.h \
 		/usr/lib64/qt6/libexec/moc
-	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/MedianXLOfflineTools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/MedianXLOfflineTools -I/home/wolf/CODE/C/MedianXLOfflineTools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/helpwindowdisplaymanager.h -o moc/moc_helpwindowdisplaymanager.cpp
+	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/mxltools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/mxltools -I/home/wolf/CODE/C/mxltools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/helpwindowdisplaymanager.h -o moc/moc_helpwindowdisplaymanager.cpp
 
 moc/moc_skilltreedialog.cpp: src/skilltreedialog.h \
 		src/structs.h \
@@ -1326,23 +1329,23 @@ moc/moc_skilltreedialog.cpp: src/skilltreedialog.h \
 		src/reversebitwriter.h \
 		moc/moc_predefs.h \
 		/usr/lib64/qt6/libexec/moc
-	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/MedianXLOfflineTools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/MedianXLOfflineTools -I/home/wolf/CODE/C/MedianXLOfflineTools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/skilltreedialog.h -o moc/moc_skilltreedialog.cpp
+	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/mxltools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/mxltools -I/home/wolf/CODE/C/mxltools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/skilltreedialog.h -o moc/moc_skilltreedialog.cpp
 
 moc/moc_allstatsdialog.cpp: src/allstatsdialog.h \
 		moc/moc_predefs.h \
 		/usr/lib64/qt6/libexec/moc
-	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/MedianXLOfflineTools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/MedianXLOfflineTools -I/home/wolf/CODE/C/MedianXLOfflineTools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/allstatsdialog.h -o moc/moc_allstatsdialog.cpp
+	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/mxltools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/mxltools -I/home/wolf/CODE/C/mxltools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/allstatsdialog.h -o moc/moc_allstatsdialog.cpp
 
 moc/moc_qtsingleapplication.cpp: qtsingleapplication/qtsingleapplication.h \
 		moc/moc_predefs.h \
 		/usr/lib64/qt6/libexec/moc
-	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/MedianXLOfflineTools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/MedianXLOfflineTools -I/home/wolf/CODE/C/MedianXLOfflineTools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include qtsingleapplication/qtsingleapplication.h -o moc/moc_qtsingleapplication.cpp
+	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/mxltools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/mxltools -I/home/wolf/CODE/C/mxltools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include qtsingleapplication/qtsingleapplication.h -o moc/moc_qtsingleapplication.cpp
 
 moc/moc_qtlocalpeer.cpp: qtsingleapplication/qtlocalpeer.h \
 		qtsingleapplication/qtlockedfile.h \
 		moc/moc_predefs.h \
 		/usr/lib64/qt6/libexec/moc
-	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/MedianXLOfflineTools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/MedianXLOfflineTools -I/home/wolf/CODE/C/MedianXLOfflineTools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include qtsingleapplication/qtlocalpeer.h -o moc/moc_qtlocalpeer.cpp
+	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/mxltools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/mxltools -I/home/wolf/CODE/C/mxltools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include qtsingleapplication/qtlocalpeer.h -o moc/moc_qtlocalpeer.cpp
 
 compiler_moc_objc_header_make_all:
 compiler_moc_objc_header_clean:
@@ -1353,19 +1356,19 @@ moc/kexpandablegroupbox.moc: src/kexpandablegroupbox.cpp \
 		src/kexpandablegroupbox.h \
 		moc/moc_predefs.h \
 		/usr/lib64/qt6/libexec/moc
-	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/MedianXLOfflineTools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/MedianXLOfflineTools -I/home/wolf/CODE/C/MedianXLOfflineTools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/kexpandablegroupbox.cpp -o moc/kexpandablegroupbox.moc
+	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/mxltools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/mxltools -I/home/wolf/CODE/C/mxltools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/kexpandablegroupbox.cpp -o moc/kexpandablegroupbox.moc
 
 moc/helpwindowdisplaymanager.moc: src/helpwindowdisplaymanager.cpp \
 		src/helpwindowdisplaymanager.h \
 		moc/moc_predefs.h \
 		/usr/lib64/qt6/libexec/moc
-	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/MedianXLOfflineTools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/MedianXLOfflineTools -I/home/wolf/CODE/C/MedianXLOfflineTools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/helpwindowdisplaymanager.cpp -o moc/helpwindowdisplaymanager.moc
+	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/mxltools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/mxltools -I/home/wolf/CODE/C/mxltools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/helpwindowdisplaymanager.cpp -o moc/helpwindowdisplaymanager.moc
 
 moc/messagecheckbox_p.moc: src/messagecheckbox_p.cpp \
 		src/messagecheckbox.h \
 		moc/moc_predefs.h \
 		/usr/lib64/qt6/libexec/moc
-	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/MedianXLOfflineTools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/MedianXLOfflineTools -I/home/wolf/CODE/C/MedianXLOfflineTools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/messagecheckbox_p.cpp -o moc/messagecheckbox_p.moc
+	/usr/lib64/qt6/libexec/moc $(DEFINES) --include /home/wolf/CODE/C/mxltools/moc/moc_predefs.h -I/usr/lib64/qt6/mkspecs/linux-g++ -I/home/wolf/CODE/C/mxltools -I/home/wolf/CODE/C/mxltools/qtsingleapplication -I/usr/include/qt6 -I/usr/include/qt6/QtWidgets -I/usr/include/qt6/QtGui -I/usr/include/qt6/QtNetwork -I/usr/include/qt6/QtConcurrent -I/usr/include/qt6/QtCore -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15 -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/x86_64-pc-linux-gnu -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include/g++-v15/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15/include -I/usr/local/include -I/usr/include src/messagecheckbox_p.cpp -o moc/messagecheckbox_p.moc
 
 compiler_uic_make_all: ui/ui_medianxlofflinetools.h ui/ui_resurrectpenaltydialog.h ui/ui_qd2charrenamer.h ui/ui_propertiesviewerwidget.h ui/ui_finditemsdialog.h ui/ui_stashsortingoptionsdialog.h ui/ui_allstatsdialog.h
 compiler_uic_clean:
@@ -1498,7 +1501,8 @@ obj/propertiesviewerwidget.o: src/propertiesviewerwidget.cpp src/propertiesviewe
 		src/languagemanager.hpp \
 		src/itemparser.h \
 		src/propertiesdisplaymanager.h \
-		src/characterinfo.hpp
+		src/characterinfo.hpp \
+		src/propertyeditor.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o obj/propertiesviewerwidget.o src/propertiesviewerwidget.cpp
 
 obj/itemsviewerdialog.o: src/itemsviewerdialog.cpp src/itemsviewerdialog.h \

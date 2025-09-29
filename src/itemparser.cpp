@@ -349,6 +349,10 @@ PropertiesMultiMap ItemParser::parseItemProperties(ReverseBitReader &bitReader, 
             int id = bitReader.readNumber(CharacterStats::StatCodeLength);
             if (id == ItemProperties::End)
             {
+#ifndef QT_NO_DEBUG
+                qDebug() << QString("ItemParser: Finished parsing %1 properties")
+                           .arg(props.size());
+#endif
                 *status = ItemInfo::Ok;
                 return props;
             }
@@ -360,7 +364,19 @@ PropertiesMultiMap ItemParser::parseItemProperties(ReverseBitReader &bitReader, 
             if (!txtProperty)
                 throw 6;
             propToAdd->param = txtProperty->paramBits ? bitReader.readNumber(txtProperty->paramBits) : 0;
-            propToAdd->value = bitReader.readNumber(txtProperty->bits) - txtProperty->add;
+            
+            int rawValue = bitReader.readNumber(txtProperty->bits);
+            propToAdd->value = rawValue - txtProperty->add;
+            
+#ifndef QT_NO_DEBUG
+            qDebug() << QString("ItemParser: Parsed prop ID=%1, rawValue=%2, add=%3, finalValue=%4, param=%5")
+                       .arg(id)
+                       .arg(rawValue)
+                       .arg(txtProperty->add)
+                       .arg(propToAdd->value)
+                       .arg(propToAdd->param);
+#endif
+            
             if (id == ItemProperties::EnhancedDamage)
             {
                 qint16 minEnhDamage = bitReader.readNumber(txtProperty->bits) - txtProperty->add;
