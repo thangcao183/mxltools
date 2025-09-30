@@ -53,6 +53,11 @@ void RuneCreationWidget::setupUI()
     _columnSpin->setRange(0, 9);
     gridLayout->addWidget(_columnSpin, 2, 1);
     
+    // Enchanted option
+    _enchantedCheckBox = new QCheckBox(tr("Create as Enchanted Rune"));
+    _enchantedCheckBox->setToolTip(tr("Enchanted runes have additional magical properties"));
+    gridLayout->addWidget(_enchantedCheckBox, 3, 0, 1, 2);
+    
     mainLayout->addLayout(gridLayout);
     
     // Preview area
@@ -91,7 +96,7 @@ void RuneCreationWidget::populateRuneList()
 {
     _runeCombo->clear();
     
-    // Add common runes
+    // Add all runes from MedianXL
     struct RuneInfo {
         QString code;
         QString name;
@@ -99,6 +104,8 @@ void RuneCreationWidget::populateRuneList()
     };
     
     QList<RuneInfo> runes;
+    
+    // Standard Diablo 2 Runes (r01-r33)
     runes << RuneInfo{"r01", "El", "El Rune (+1 Light Radius, +15 Attack Rating)"};
     runes << RuneInfo{"r02", "Eld", "Eld Rune (+75% Damage to Undead, +50 Attack Rating vs Undead)"};
     runes << RuneInfo{"r03", "Tir", "Tir Rune (+2 Mana per Kill)"};
@@ -132,6 +139,76 @@ void RuneCreationWidget::populateRuneList()
     runes << RuneInfo{"r31", "Jah", "Jah Rune (Ignore Target's Defense)"};
     runes << RuneInfo{"r32", "Cham", "Cham Rune (Freezes Target +3)"};
     runes << RuneInfo{"r33", "Zod", "Zod Rune (Indestructible)"};
+    
+    // MedianXL Extended Runes (r34-r53)
+    runes << RuneInfo{"r34", "Sha", "Sha Rune (MedianXL Extended)"};
+    runes << RuneInfo{"r35", "Lah", "Lah Rune (MedianXL Extended)"};
+    runes << RuneInfo{"r36", "Kur", "Kur Rune (MedianXL Extended)"};
+    runes << RuneInfo{"r37", "Ix", "Ix Rune (MedianXL Extended)"};
+    runes << RuneInfo{"r38", "Thur", "Thur Rune (MedianXL Extended)"};
+    runes << RuneInfo{"r39", "Nas", "Nas Rune (MedianXL Extended)"};
+    runes << RuneInfo{"r40", "Ath", "Ath Rune (MedianXL Extended)"};
+    runes << RuneInfo{"r41", "Kra", "Kra Rune (MedianXL Extended)"};
+    runes << RuneInfo{"r42", "Vith", "Vith Rune (MedianXL Extended)"};
+    runes << RuneInfo{"r43", "No", "No Rune (MedianXL Extended)"};
+    runes << RuneInfo{"r44", "Yul", "Yul Rune (MedianXL Extended)"};
+    runes << RuneInfo{"r45", "Thai", "Thai Rune (MedianXL Extended)"};
+    runes << RuneInfo{"r46", "Rha", "Rha Rune (MedianXL Extended)"};
+    runes << RuneInfo{"r47", "Xar", "Xar Rune (MedianXL Extended)"};
+    runes << RuneInfo{"r48", "Nih", "Nih Rune (MedianXL Extended)"};
+    runes << RuneInfo{"r49", "Lai", "Lai Rune (MedianXL Extended)"};
+    runes << RuneInfo{"r50", "On", "On Rune (MedianXL Extended)"};
+    runes << RuneInfo{"r51", "Taha", "Taha Rune (MedianXL High Level)"};
+    runes << RuneInfo{"r52", "Ghal", "Ghal Rune (MedianXL High Level)"};
+    runes << RuneInfo{"r53", "Qor", "Qor Rune (MedianXL High Level)"};
+    
+    // MedianXL Enchanted Runes (r54-r62, r98-r99)
+    runes << RuneInfo{"r54", "Krys", "Krys Rune (MedianXL Enchanted)"};
+    runes << RuneInfo{"r55", "Auhe", "Auhe Rune (MedianXL Enchanted)"};
+    runes << RuneInfo{"r56", "Sha'ad", "Sha'ad Rune (MedianXL Enchanted)"};
+    runes << RuneInfo{"r57", "Fire", "Fire Rune (Elemental)"};
+    runes << RuneInfo{"r58", "Earth", "Earth Rune (Elemental)"};
+    runes << RuneInfo{"r59", "Magic", "Magic Rune (Elemental)"};
+    runes << RuneInfo{"r60", "Poison", "Poison Rune (Elemental)"};
+    runes << RuneInfo{"r61", "Lightning", "Lightning Rune (Elemental)"};
+    runes << RuneInfo{"r62", "Cold", "Cold Rune (Elemental)"};
+    runes << RuneInfo{"r98", "Xis", "Xis Rune (Special)"};
+    runes << RuneInfo{"r99", "Runestone", "Runestone (Special)"};
+    
+    // Super Runes (rx01-rx33) - Enhanced versions of regular runes
+    runes << RuneInfo{"rx01", "El Super", "El Rune Super (Enhanced Version)"};
+    runes << RuneInfo{"rx02", "Eld Super", "Eld Rune Super (Enhanced Version)"};
+    runes << RuneInfo{"rx03", "Tir Super", "Tir Rune Super (Enhanced Version)"};
+    runes << RuneInfo{"rx04", "Nef Super", "Nef Rune Super (Enhanced Version)"};
+    runes << RuneInfo{"rx05", "Eth Super", "Eth Rune Super (Enhanced Version)"};
+    runes << RuneInfo{"rx06", "Ith Super", "Ith Rune Super (Enhanced Version)"};
+    runes << RuneInfo{"rx07", "Tal Super", "Tal Rune Super (Enhanced Version)"};
+    runes << RuneInfo{"rx08", "Ral Super", "Ral Rune Super (Enhanced Version)"};
+    runes << RuneInfo{"rx09", "Ort Super", "Ort Rune Super (Enhanced Version)"};
+    runes << RuneInfo{"rx10", "Thul Super", "Thul Rune Super (Enhanced Version)"};
+    runes << RuneInfo{"rx11", "Amn Super", "Amn Rune Super (Enhanced Version)"};
+    runes << RuneInfo{"rx12", "Sol Super", "Sol Rune Super (Enhanced Version)"};
+    runes << RuneInfo{"rx13", "Shael Super", "Shael Rune Super (Enhanced Version)"};
+    runes << RuneInfo{"rx14", "Dol Super", "Dol Rune Super (Enhanced Version)"};
+    runes << RuneInfo{"rx15", "Hel Super", "Hel Rune Super (Enhanced Version)"};
+    runes << RuneInfo{"rx16", "Io Super", "Io Rune Super (Enhanced Version)"};
+    runes << RuneInfo{"rx17", "Lum Super", "Lum Rune Super (Enhanced Version)"};
+    runes << RuneInfo{"rx18", "Ko Super", "Ko Rune Super (Enhanced Version)"};
+    runes << RuneInfo{"rx19", "Fal Super", "Fal Rune Super (Enhanced Version)"};
+    runes << RuneInfo{"rx20", "Lem Super", "Lem Rune Super (Enhanced Version)"};
+    runes << RuneInfo{"rx21", "Pul Super", "Pul Rune Super (Enhanced Version)"};
+    runes << RuneInfo{"rx22", "Um Super", "Um Rune Super (Enhanced Version)"};
+    runes << RuneInfo{"rx23", "Mal Super", "Mal Rune Super (Enhanced Version)"};
+    runes << RuneInfo{"rx24", "Ist Super", "Ist Rune Super (Enhanced Version)"};
+    runes << RuneInfo{"rx25", "Gul Super", "Gul Rune Super (Enhanced Version)"};
+    runes << RuneInfo{"rx26", "Vex Super", "Vex Rune Super (Enhanced Version)"};
+    runes << RuneInfo{"rx27", "Ohm Super", "Ohm Rune Super (Enhanced Version)"};
+    runes << RuneInfo{"rx28", "Lo Super", "Lo Rune Super (Enhanced Version)"};
+    runes << RuneInfo{"rx29", "Sur Super", "Sur Rune Super (Enhanced Version)"};
+    runes << RuneInfo{"rx30", "Ber Super", "Ber Rune Super (Enhanced Version)"};
+    runes << RuneInfo{"rx31", "Jah Super", "Jah Rune Super (Enhanced Version)"};
+    runes << RuneInfo{"rx32", "Cham Super", "Cham Rune Super (Enhanced Version)"};
+    runes << RuneInfo{"rx33", "Zod Super", "Zod Rune Super (Enhanced Version)"};
     
     foreach (const RuneInfo &rune, runes) {
         _runeCombo->addItem(QString("%1 - %2").arg(rune.name).arg(rune.description), rune.code);
@@ -195,19 +272,50 @@ void RuneCreationWidget::setItemPosition(int row, int column)
 ItemInfo* RuneCreationWidget::createRuneItem(const QString &runeCode)
 {
     try {
-        // Convert runeCode (r01, r02) to file format (r1, r2)
+        // Convert runeCode to file format
         QString runeFile = runeCode;
-        if (runeCode.startsWith("r0")) {
-            runeFile = "r" + runeCode.mid(2); // r01 -> r1
+        if (runeCode.startsWith("rx0") && runeCode.length() == 4) {
+            // Super runes: rx01 -> rx1, rx02 -> rx2, etc.
+            runeFile = "rx" + runeCode.mid(3);
+        } else if (runeCode.startsWith("r0") && runeCode.length() == 3) {
+            // Regular runes: r01 -> r1, r02 -> r2, etc.
+            runeFile = "r" + runeCode.mid(2);
         }
+        // For other codes (r34-r99, rx34-rx99), keep as is
         
         // Load the actual rune template directly from resources
         QString runeFilePath = QString("runes/%1").arg(runeFile);
         ItemInfo *rune = ItemDataBase::loadItemFromFile(runeFilePath);
         
+        // If template not found, try fallback strategies
         if (!rune) {
             qWarning() << "Failed to load rune template:" << runeFilePath;
-            return nullptr;
+            
+            // Strategy 1: For Super runes (rx series), try using regular rune equivalent
+            if (runeCode.startsWith("rx")) {
+                QString fallbackCode = runeCode;
+                fallbackCode.replace("rx", "r");
+                QString fallbackFile = fallbackCode;
+                if (fallbackCode.startsWith("r0") && fallbackCode.length() == 3) {
+                    fallbackFile = "r" + fallbackCode.mid(2);
+                }
+                runeFilePath = QString("runes/%1").arg(fallbackFile);
+                rune = ItemDataBase::loadItemFromFile(runeFilePath);
+                qDebug() << "Trying Super rune fallback:" << runeFilePath;
+            }
+            
+            // Strategy 2: For high-numbered runes, use a basic rune template
+            if (!rune) {
+                // Use r1 (El) as basic template for any missing rune
+                runeFilePath = "runes/r1";
+                rune = ItemDataBase::loadItemFromFile(runeFilePath);
+                qDebug() << "Using r1 fallback template for:" << runeCode;
+            }
+            
+            if (!rune) {
+                qWarning() << "All fallback strategies failed for:" << runeCode;
+                return nullptr;
+            }
         }
         
         // Find an existing rune to copy format from

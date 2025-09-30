@@ -6,6 +6,7 @@
 #include <QSpinBox>
 #include <QPushButton>
 #include <QLabel>
+#include <QCheckBox>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGridLayout>
@@ -49,6 +50,7 @@ private:
     QComboBox *_runeCombo;
     QSpinBox *_rowSpin;
     QSpinBox *_columnSpin;
+    QCheckBox *_enchantedCheckBox;
     QLabel *_previewLabel;
     QPushButton *_createButton;
     QPushButton *_cancelButton;
