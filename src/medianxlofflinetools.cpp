@@ -42,9 +42,7 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 
-#ifndef QT_NO_DEBUG
 #include <QDebug>
-#endif
 
 #if IS_QT5
 #include <QStandardPaths>
@@ -636,10 +634,27 @@ void MedianXLOfflineTools::saveCharacter()
     int characterItemsSize = 2, mercItemsSize = 0;
     ItemsList characterItems, mercItems, ironGolemItems;
     QHash<Enums::ItemStorage::ItemStorageEnum, ItemsList> plugyItemsHash;
+    
+    qDebug() << "SAVE: Starting save process. Total items in character:" << charInfo.items.character.size();
+    int runeCount = 0;
     foreach (ItemInfo *item, charInfo.items.character)
     {
-        if (isInExternalStorage(item))
+        if (item->itemType.startsWith("r") && item->itemType.length() <= 3) {
+            runeCount++;
+            qDebug() << "SAVE: Found rune" << item->itemType << "at storage=" << item->storage 
+                     << "location=" << item->location << "row=" << item->row << "col=" << item->column;
+        }
+    }
+    qDebug() << "SAVE: Total runes found before processing:" << runeCount;
+    
+    foreach (ItemInfo *item, charInfo.items.character)
+    {
+        if (isInExternalStorage(item)) {
+            if (item->itemType.startsWith("r") && item->itemType.length() <= 3) {
+                qDebug() << "SAVE: Rune" << item->itemType << "going to EXTERNAL storage" << item->storage;
+            }
             plugyItemsHash[static_cast<Enums::ItemStorage::ItemStorageEnum>(item->storage)] += item;
+        }
         else
         {
             int *pItemsSize = 0;
@@ -675,10 +690,26 @@ void MedianXLOfflineTools::saveCharacter()
         }
     }
 
+    // Debug: count runes in each category
+    int characterRuneCount = 0, mercRuneCount = 0, golemRuneCount = 0;
+    foreach (ItemInfo *item, characterItems) {
+        if (item->itemType.startsWith("r") && item->itemType.length() <= 3) characterRuneCount++;
+    }
+    foreach (ItemInfo *item, mercItems) {
+        if (item->itemType.startsWith("r") && item->itemType.length() <= 3) mercRuneCount++;
+    }
+    foreach (ItemInfo *item, ironGolemItems) {
+        if (item->itemType.startsWith("r") && item->itemType.length() <= 3) golemRuneCount++;
+    }
+    qDebug() << "SAVE: Items categorized - Character:" << characterItems.size() << "(runes:" << characterRuneCount << ")"
+             << "Merc:" << mercItems.size() << "(runes:" << mercRuneCount << ")"
+             << "Golem:" << ironGolemItems.size() << "(runes:" << golemRuneCount << ")";
+
     // write character items
     tempFileContents.replace(charInfo.itemsOffset, charInfo.itemsEndOffset - charInfo.itemsOffset, QByteArray(characterItemsSize, 0));
     outputDataStream.device()->seek(charInfo.itemsOffset); //-V807
     outputDataStream << static_cast<quint16>(characterItems.size());
+    qDebug() << "SAVE: Writing" << characterItems.size() << "character items to file";
     ItemParser::writeItems(characterItems, outputDataStream);
 
     // write merc items
@@ -2146,8 +2177,20 @@ bool MedianXLOfflineTools::processSaveFile()
 
     quint16 charItemsTotal;
     inputDataStream >> charItemsTotal;
+    qDebug() << "LOAD: Loading" << charItemsTotal << "character items from save file";
     ItemsList itemsBuffer;
     QString corruptedItems = ItemParser::parseItemsToBuffer(charItemsTotal, inputDataStream, _saveFileContents, tr("Corrupted item detected in %1 at (%2,%3) in slot %4"), &itemsBuffer);
+    
+    // Debug: count runes loaded
+    int loadedRuneCount = 0;
+    foreach (ItemInfo *item, itemsBuffer) {
+        if (item->itemType.startsWith("r") && item->itemType.length() <= 3) {
+            loadedRuneCount++;
+            qDebug() << "LOAD: Found rune" << item->itemType << "at storage=" << item->storage 
+                     << "location=" << item->location << "row=" << item->row << "col=" << item->column;
+        }
+    }
+    qDebug() << "LOAD: Total runes loaded from character items:" << loadedRuneCount;
 #ifdef DUPE_CHECK
     qDebug("%s", qPrintable(corruptedItems));
 #else

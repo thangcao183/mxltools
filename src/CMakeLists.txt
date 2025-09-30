@@ -72,6 +72,8 @@ target_sources(MedianXLOfflineTools PRIVATE
 	reversebitreader.h
 	reversebitwriter.cpp
 	reversebitwriter.h
+	runecreationwidget.cpp
+	runecreationwidget.h
 	showselecteditemdelegate.cpp
 	showselecteditemdelegate.h
 	skilltreedialog.cpp

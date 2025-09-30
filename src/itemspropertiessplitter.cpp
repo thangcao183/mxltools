@@ -10,6 +10,7 @@
 #include "characterinfo.hpp"
 #include "progressbarmodal.hpp"
 #include "qd2charrenamer.h"
+#include "runecreationwidget.h"
 
 #include <QMenu>
 #include <QInputDialog>
@@ -18,9 +19,7 @@
 #include <QVBoxLayout>
 #include <QPushButton>
 
-#ifndef QT_NO_DEBUG
 #include <QDebug>
-#endif
 
 #ifdef DUMP_INFO_ACTION
 #include <QTextCodec>
@@ -216,6 +215,8 @@ void ItemsPropertiesSplitter::updateItems(const ItemsList &newItems)
 void ItemsPropertiesSplitter::showContextMenu(const QPoint &pos)
 {
     ItemInfo *item = selectedItem(false);
+    QModelIndex clickedIndex = _itemsView->indexAt(pos);
+    
     if (item)
     {
         QList<QAction *> actions;
@@ -351,6 +352,22 @@ void ItemsPropertiesSplitter::showContextMenu(const QPoint &pos)
         actions << separatorAction() << dumpInfoAction;
 #endif
         QMenu::exec(actions, _itemsView->mapToGlobal(pos));
+    }
+    else if (clickedIndex.isValid())
+    {
+        // Right-clicked on empty cell - show rune creation menu
+        QList<QAction *> actions;
+        
+        QAction *createRuneAction = new QAction(QString("Create Rune..."), this);
+        if (createRuneAction) {
+            createRuneAction->setData(QPoint(clickedIndex.row(), clickedIndex.column()));
+            connect(createRuneAction, SIGNAL(triggered()), this, SLOT(createRuneAt()));
+            actions << createRuneAction;
+            
+            if (!actions.isEmpty()) {
+                QMenu::exec(actions, _itemsView->mapToGlobal(pos));
+            }
+        }
     }
 }
 
@@ -610,6 +627,65 @@ void ItemsPropertiesSplitter::personalize()
 //{
 
 //}
+
+void ItemsPropertiesSplitter::createRuneAt()
+{
+    QAction *action = qobject_cast<QAction *>(sender());
+    if (!action) {
+        return;
+    }
+    
+    QPoint position = action->data().toPoint();
+    if (position.x() < 0 || position.y() < 0) {
+        return;
+    }
+    
+    try {
+        RuneCreationWidget *dialog = new RuneCreationWidget(this);
+        if (!dialog) return;
+        
+        dialog->setItemPosition(position.x(), position.y());
+        
+        if (dialog->exec() == QDialog::Accepted)
+        {
+            ItemInfo *newRune = dialog->getCreatedRune();
+            if (newRune)
+            {
+                qDebug() << "Using cube upgrade method to store rune:" << newRune->itemType;
+                
+                // Use exact same method as cube upgrade - storeItemInStorage handles everything
+                if (!storeItemInStorage(newRune, Enums::ItemStorage::Inventory, true)) {
+                    QMessageBox::warning(this, tr("Storage Failed"), 
+                        tr("Failed to store rune in inventory!"));
+                    delete newRune;
+                    return;
+                }
+                
+                // Mark as changed for save
+                setCurrentStorageHasChanged();
+                
+                // Emit signal to notify that items have changed
+                emit itemsChanged();
+                
+                qDebug() << "Rune added to character items. Total items now:" 
+                         << CharacterInfo::instance().items.character.size();
+                
+                // Prompt user to save immediately
+                QMessageBox::information(this, tr("Rune Created"), 
+                    tr("Rune created successfully at position (%1, %2).\n\n"
+                       "Remember to save the character (Ctrl+S) to keep the changes!")
+                    .arg(newRune->row + 1).arg(newRune->column + 1));
+                
+                // Show the item in the properties viewer
+                showItem(newRune);
+            }
+        }
+        
+        dialog->deleteLater();
+    } catch (...) {
+        // Silently handle exceptions
+    }
+}
 
 void ItemsPropertiesSplitter::deleteItemTriggered()
 {
