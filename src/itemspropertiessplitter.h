@@ -14,6 +14,7 @@ class ItemStorageTableView;
 class ItemStorageTableModel;
 class PropertiesViewerWidget;
 class RuneCreationWidget;
+class GemCreationWidget;
 
 class QModelIndex;
 class QMenu;
@@ -82,6 +83,7 @@ protected slots:
     void personalize();
     void deleteItemTriggered();
     void createRuneAt();
+    void createGemAt();
 #ifdef DUMP_INFO_ACTION
     void dumpInfo(ItemInfo *item = 0, bool shouldShowMsgBox = true);
 #endif // DUMP_INFO_ACTION

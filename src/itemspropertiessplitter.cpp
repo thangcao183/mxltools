@@ -11,6 +11,7 @@
 #include "progressbarmodal.hpp"
 #include "qd2charrenamer.h"
 #include "runecreationwidget.h"
+#include "gemcreationwidget.h"
 
 #include <QMenu>
 #include <QInputDialog>
@@ -355,7 +356,7 @@ void ItemsPropertiesSplitter::showContextMenu(const QPoint &pos)
     }
     else if (clickedIndex.isValid())
     {
-        // Right-clicked on empty cell - show rune creation menu
+        // Right-clicked on empty cell - show item creation menu
         QList<QAction *> actions;
         
         QAction *createRuneAction = new QAction(QString("Create Rune..."), this);
@@ -363,10 +364,17 @@ void ItemsPropertiesSplitter::showContextMenu(const QPoint &pos)
             createRuneAction->setData(QPoint(clickedIndex.row(), clickedIndex.column()));
             connect(createRuneAction, SIGNAL(triggered()), this, SLOT(createRuneAt()));
             actions << createRuneAction;
-            
-            if (!actions.isEmpty()) {
-                QMenu::exec(actions, _itemsView->mapToGlobal(pos));
-            }
+        }
+        
+        QAction *createGemAction = new QAction(QString("Create Gem..."), this);
+        if (createGemAction) {
+            createGemAction->setData(QPoint(clickedIndex.row(), clickedIndex.column()));
+            connect(createGemAction, SIGNAL(triggered()), this, SLOT(createGemAt()));
+            actions << createGemAction;
+        }
+        
+        if (!actions.isEmpty()) {
+            QMenu::exec(actions, _itemsView->mapToGlobal(pos));
         }
     }
 }
@@ -678,6 +686,65 @@ void ItemsPropertiesSplitter::createRuneAt()
                 
                 // Show the item in the properties viewer
                 showItem(newRune);
+            }
+        }
+        
+        dialog->deleteLater();
+    } catch (...) {
+        // Silently handle exceptions
+    }
+}
+
+void ItemsPropertiesSplitter::createGemAt()
+{
+    QAction *action = qobject_cast<QAction *>(sender());
+    if (!action) {
+        return;
+    }
+    
+    QPoint position = action->data().toPoint();
+    if (position.x() < 0 || position.y() < 0) {
+        return;
+    }
+    
+    try {
+        GemCreationWidget *dialog = new GemCreationWidget(this);
+        if (!dialog) return;
+        
+        dialog->setItemPosition(position.x(), position.y());
+        
+        if (dialog->exec() == QDialog::Accepted)
+        {
+            ItemInfo *newGem = dialog->getCreatedGem();
+            if (newGem)
+            {
+                qDebug() << "Using cube upgrade method to store gem:" << newGem->itemType;
+                
+                // Use exact same method as cube upgrade - storeItemInStorage handles everything
+                if (!storeItemInStorage(newGem, Enums::ItemStorage::Inventory, true)) {
+                    QMessageBox::warning(this, tr("Storage Failed"), 
+                        tr("Failed to store gem in inventory!"));
+                    delete newGem;
+                    return;
+                }
+                
+                // Mark as changed for save
+                setCurrentStorageHasChanged();
+                
+                // Emit signal to notify that items have changed
+                emit itemsChanged();
+                
+                qDebug() << "Gem added to character items. Total items now:" 
+                         << CharacterInfo::instance().items.character.size();
+                
+                // Prompt user to save immediately
+                QMessageBox::information(this, tr("Gem Created"), 
+                    tr("Gem created successfully at position (%1, %2).\n\n"
+                       "Remember to save the character (Ctrl+S) to keep the changes!")
+                    .arg(newGem->row + 1).arg(newGem->column + 1));
+                
+                // Show the item in the properties viewer
+                showItem(newGem);
             }
         }
         
