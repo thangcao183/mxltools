@@ -100,6 +100,7 @@ jobs:
       run: |
         mkdir dist-linux
         cp build/MedianXLOfflineTools dist-linux/
+        cp -r resources dist-linux/
         cp README.md dist-linux/
         echo "MedianXL Offline Tools - Linux Version" > dist-linux/README.txt
         echo "Run with: ./MedianXLOfflineTools" >> dist-linux/README.txt
