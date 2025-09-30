@@ -76,6 +76,8 @@ target_sources(MedianXLOfflineTools PRIVATE
 	runecreationwidget.h
 	gemcreationwidget.cpp
 	gemcreationwidget.h
+	arcanecrystalcreationwidget.cpp
+	arcanecrystalcreationwidget.h
 	showselecteditemdelegate.cpp
 	showselecteditemdelegate.h
 	skilltreedialog.cpp

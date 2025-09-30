@@ -12,6 +12,7 @@
 #include "qd2charrenamer.h"
 #include "runecreationwidget.h"
 #include "gemcreationwidget.h"
+#include "arcanecrystalcreationwidget.h"
 
 #include <QMenu>
 #include <QInputDialog>
@@ -371,6 +372,13 @@ void ItemsPropertiesSplitter::showContextMenu(const QPoint &pos)
             createGemAction->setData(QPoint(clickedIndex.row(), clickedIndex.column()));
             connect(createGemAction, SIGNAL(triggered()), this, SLOT(createGemAt()));
             actions << createGemAction;
+        }
+        
+        QAction *createCrystalAction = new QAction(QString("Create Arcane Crystal..."), this);
+        if (createCrystalAction) {
+            createCrystalAction->setData(QPoint(clickedIndex.row(), clickedIndex.column()));
+            connect(createCrystalAction, SIGNAL(triggered()), this, SLOT(createArcaneCrystalAt()));
+            actions << createCrystalAction;
         }
         
         if (!actions.isEmpty()) {
@@ -745,6 +753,94 @@ void ItemsPropertiesSplitter::createGemAt()
                 
                 // Show the item in the properties viewer
                 showItem(newGem);
+            }
+        }
+        
+        dialog->deleteLater();
+    } catch (...) {
+        // Silently handle exceptions
+    }
+}
+
+void ItemsPropertiesSplitter::createArcaneCrystalAt()
+{
+    QAction *action = qobject_cast<QAction *>(sender());
+    if (!action) {
+        return;
+    }
+    
+    QPoint position = action->data().toPoint();
+    if (position.x() < 0 || position.y() < 0) {
+        return;
+    }
+    
+    try {
+        ArcaneCrystalCreationWidget *dialog = new ArcaneCrystalCreationWidget(this);
+        if (!dialog) {
+            qWarning() << "Failed to create ArcaneCrystalCreationWidget";
+            return;
+        }
+        
+        dialog->setStartPosition(position.x(), position.y());
+        
+        if (dialog->exec() == QDialog::Accepted)
+        {
+            QList<ItemInfo*> newCrystals = dialog->getCreatedCrystals();
+            if (!newCrystals.isEmpty())
+            {
+                qDebug() << "Creating" << newCrystals.size() << "Arcane Crystals";
+                
+                int successCount = 0;
+                QList<ItemInfo*> successfulCrystals;
+                
+                for (int i = 0; i < newCrystals.size(); i++) {
+                    ItemInfo* crystal = newCrystals.at(i);
+                    if (crystal) {
+                        qDebug() << "Storing Arcane Crystal" << (i+1) << "at position:" << crystal->row << crystal->column;
+                        
+                        // Use exact same method as cube upgrade - storeItemInStorage handles everything
+                        if (storeItemInStorage(crystal, Enums::ItemStorage::Inventory, true)) {
+                            successCount++;
+                            successfulCrystals.append(crystal);
+                        } else {
+                            qWarning() << "Failed to store Arcane Crystal at position" << crystal->row << crystal->column;
+                            delete crystal;
+                        }
+                    }
+                }
+                
+                if (successCount > 0) {
+                    // Mark as changed for save
+                    setCurrentStorageHasChanged();
+                    
+                    // Emit signal to notify that items have changed
+                    emit itemsChanged();
+                    
+                    qDebug() << "Added" << successCount << "Arcane Crystals to character items. Total items now:" 
+                             << CharacterInfo::instance().items.character.size();
+                    
+                    // Prompt user to save immediately
+                    QString message;
+                    if (successCount == 1) {
+                        message = tr("Arcane Crystal created successfully at position (%1, %2).\n\n"
+                                   "Remember to save the character (Ctrl+S) to keep the changes!")
+                                .arg(newCrystals.first()->row + 1).arg(newCrystals.first()->column + 1);
+                    } else {
+                        message = tr("%1 Arcane Crystals created successfully starting at position (%2, %3).\n\n"
+                                   "Remember to save the character (Ctrl+S) to keep the changes!")
+                                .arg(successCount).arg(position.x() + 1).arg(position.y() + 1);
+                    }
+                    
+                    QMessageBox::information(this, tr("Arcane Crystals Created"), message);
+                    
+                    // Show the first crystal in the properties viewer
+                    if (!successfulCrystals.isEmpty()) {
+                        showItem(successfulCrystals.first());
+                    }
+                } else {
+                    QMessageBox::warning(this, tr("Storage Failed"), 
+                        tr("Failed to store any Arcane Crystals in inventory!"));
+                }
             }
         }
         

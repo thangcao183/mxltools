@@ -46,6 +46,8 @@ private:
     void setupUI();
     void populateGemList();
     ItemInfo* createGemItem(const QString &gemCode);
+    ItemInfo* createBasicGem(const QString &gemCode);
+    QString getGemFileForCode(const QString &gemCode);
     QString getGemProperties(const QString &gemCode);
     
     // UI components

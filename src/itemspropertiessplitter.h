@@ -84,6 +84,7 @@ protected slots:
     void deleteItemTriggered();
     void createRuneAt();
     void createGemAt();
+    void createArcaneCrystalAt();
 #ifdef DUMP_INFO_ACTION
     void dumpInfo(ItemInfo *item = 0, bool shouldShowMsgBox = true);
 #endif // DUMP_INFO_ACTION

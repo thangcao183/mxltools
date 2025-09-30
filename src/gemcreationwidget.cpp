@@ -299,41 +299,222 @@ void GemCreationWidget::setItemPosition(int row, int column)
 ItemInfo* GemCreationWidget::createGemItem(const QString &gemCode)
 {
     try {
-        // Try to load template gem from save folder first
-        QString gemFilePath = QString("gems/%1").arg(gemCode);
-        ItemInfo* gem = ItemDataBase::loadItemFromFile(gemFilePath);
-        
-        if (!gem) {
-            // Try loading a basic gem as template (chipped ruby as fallback)
-            gemFilePath = "gems/gcr";
-            gem = ItemDataBase::loadItemFromFile(gemFilePath);
-            qDebug() << "Using gcr fallback template for:" << gemCode;
-        }
-        
-        if (!gem) {
-            qWarning() << "Could not load gem template for:" << gemCode;
+        // Convert gem code to file path using the same approach as runes
+        QString gemFile = getGemFileForCode(gemCode);
+        if (gemFile.isEmpty()) {
+            qWarning() << "No gem file mapping found for:" << gemCode;
             return nullptr;
         }
         
-        // Update itemType to match selected gem if different
+        // Load the actual gem template directly from resources using ItemDataBase::loadItemFromFile
+        QString gemFilePath = QString("gems/%1").arg(gemFile);
+        qDebug() << "Attempting to load gem from:" << gemFilePath;
+        qDebug() << "Full resource path will be:" << QString(":/Items/items/%1.d2i").arg(gemFilePath);
+        
+        ItemInfo *gem = ItemDataBase::loadItemFromFile(gemFilePath);
+        
+        if (!gem) {
+            qWarning() << "Failed to load gem template:" << gemFilePath;
+            qWarning() << "Gem code was:" << gemCode << "mapped to file:" << gemFile;
+            return nullptr;
+        }
+        
+        qDebug() << "Successfully loaded gem template from:" << gemFilePath;
+        qDebug() << "Template itemType:" << gem->itemType << "bitString.length:" << gem->bitString.length();
+        
+        // Update itemType to match selected gem if needed
         if (gem->itemType != gemCode.toUtf8()) {
             qDebug() << "Updating itemType from" << gem->itemType << "to" << gemCode;
             gem->itemType = gemCode.toUtf8();
+            
+            // Update itemType in bitString using the same method as runes
+            for (int i = 0; i < gem->itemType.length() && i < 4; i++) {
+                ReverseBitWriter::replaceValueInBitString(gem->bitString, 
+                    Enums::ItemOffsets::Type + i * 8, gem->itemType.at(i));
+            }
+            
             gem->hasChanged = true;
         }
         
-        // Set position
+        // Set position using move method
         gem->move(_targetRow, _targetColumn, 0, true);
         
-        qDebug() << "Successfully created gem:" << gemCode;
+        qDebug() << "Successfully created gem:" << gemCode << "from" << gemFilePath;
         qDebug() << "Gem details: storage=" << gem->storage << "location=" << gem->location 
                  << "row=" << gem->row << "column=" << gem->column
-                 << "bitString.length=" << gem->bitString.length();
+                 << "bitString.length=" << gem->bitString.length() << "hasChanged=" << gem->hasChanged;
         
         return gem;
         
+    } catch (const std::exception& e) {
+        qWarning() << "Exception occurred while creating gem:" << gemCode << "Error:" << e.what();
+        return nullptr;
     } catch (...) {
-        qWarning() << "Exception occurred while creating gem:" << gemCode;
+        qWarning() << "Unknown exception occurred while creating gem:" << gemCode;
+        return nullptr;
+    }
+}
+
+QString GemCreationWidget::getGemFileForCode(const QString &gemCode)
+{
+    // Map gem codes to .d2i file names based on the resources/items/gems/ structure
+    // Pattern: gemXY.d2i where X is gem type letter, Y is quality number
+    
+    qDebug() << "getGemFileForCode called with:" << gemCode;
+    
+    static QHash<QString, QString> gemFileMapping;
+    if (gemFileMapping.isEmpty()) {
+        // Sapphire (Cold Resistance) - 's' files
+        gemFileMapping["gcb"] = "gems1";  // Chipped Sapphire
+        gemFileMapping["gfb"] = "gems2";  // Flawed Sapphire
+        gemFileMapping["gsb"] = "gems3";  // Sapphire
+        gemFileMapping["glb"] = "gems4";  // Flawless Sapphire
+        gemFileMapping["gpb"] = "gems4";  // Perfect Sapphire (use flawless as fallback)
+        
+        // Emerald (Dexterity) - 'e' files
+        gemFileMapping["gcg"] = "geme1";  // Chipped Emerald
+        gemFileMapping["gfg"] = "geme2";  // Flawed Emerald
+        gemFileMapping["gsg"] = "geme3";  // Emerald
+        gemFileMapping["glg"] = "geme4";  // Flawless Emerald
+        gemFileMapping["gpg"] = "geme4";  // Perfect Emerald
+        
+        // Ruby (Fire Resistance) - 'r' files
+        gemFileMapping["gcr"] = "gemr1";  // Chipped Ruby
+        gemFileMapping["gfr"] = "gemr2";  // Flawed Ruby
+        gemFileMapping["gsr"] = "gemr3";  // Ruby
+        gemFileMapping["glr"] = "gemr4";  // Flawless Ruby
+        gemFileMapping["gpr"] = "gemr4";  // Perfect Ruby
+        
+        // Amethyst (Strength) - 'a' files
+        gemFileMapping["gcv"] = "gema1";  // Chipped Amethyst
+        gemFileMapping["gfv"] = "gema2";  // Flawed Amethyst
+        gemFileMapping["gsv"] = "gema3";  // Amethyst
+        gemFileMapping["glv"] = "gema4";  // Flawless Amethyst
+        gemFileMapping["gpv"] = "gema4";  // Perfect Amethyst
+        
+        // Diamond (Attack Rating) - 'd' files
+        gemFileMapping["gcw"] = "gemd1";  // Chipped Diamond
+        gemFileMapping["gfw"] = "gemd2";  // Flawed Diamond
+        gemFileMapping["gsw"] = "gemd3";  // Diamond
+        gemFileMapping["glw"] = "gemd4";  // Flawless Diamond
+        gemFileMapping["gpw"] = "gemd4";  // Perfect Diamond
+        
+        // Topaz (Lightning Resistance) - 't' files
+        gemFileMapping["gcy"] = "gemt1";  // Chipped Topaz
+        gemFileMapping["gfy"] = "gemt2";  // Flawed Topaz
+        gemFileMapping["gsy"] = "gemt3";  // Topaz
+        gemFileMapping["gly"] = "gemt4";  // Flawless Topaz
+        gemFileMapping["gpy"] = "gemt4";  // Perfect Topaz
+        
+        // Special MedianXL Gems (use available gem files as fallbacks)
+        // Amber - use 'm' files if available, fallback to gems1
+        gemFileMapping["5$a"] = "gema1";  // Chipped Amber -> Amethyst 1
+        gemFileMapping["5$b"] = "gema2";  // Flawed Amber -> Amethyst 2
+        gemFileMapping["5$c"] = "gema3";  // Amber -> Amethyst 3
+        gemFileMapping["5$d"] = "gema4";  // Flawless Amber -> Amethyst 4
+        gemFileMapping["5$e"] = "gema4";  // Perfect Amber -> Amethyst 4
+        
+        // Turquoise - use 'q' files if available, fallback to emerald
+        gemFileMapping["7$a"] = "geme1";  // Chipped Turquoise -> Emerald 1
+        gemFileMapping["7$b"] = "geme2";  // Flawed Turquoise -> Emerald 2
+        gemFileMapping["7$c"] = "geme3";  // Turquoise -> Emerald 3
+        gemFileMapping["7$d"] = "geme4";  // Flawless Turquoise -> Emerald 4
+        gemFileMapping["7$e"] = "geme4";  // Perfect Turquoise -> Emerald 4
+        
+        // Bloodstone - use 'l' files if available, fallback to ruby
+        gemFileMapping["9$a"] = "gemr1";  // Chipped Bloodstone -> Ruby 1
+        gemFileMapping["9$b"] = "gemr2";  // Flawed Bloodstone -> Ruby 2
+        gemFileMapping["9$c"] = "gemr3";  // Bloodstone -> Ruby 3
+        gemFileMapping["9$d"] = "gemr4";  // Flawless Bloodstone -> Ruby 4
+        gemFileMapping["9$e"] = "gemr4";  // Perfect Bloodstone -> Ruby 4
+        
+        // Onyx - use 'o' files if available, fallback to diamond  
+        gemFileMapping["g$a"] = "gemd1";  // Chipped Onyx -> Diamond 1
+        gemFileMapping["g$b"] = "gemd2";  // Flawed Onyx -> Diamond 2
+        gemFileMapping["g$c"] = "gemd3";  // Onyx -> Diamond 3
+        gemFileMapping["g$d"] = "gemd4";  // Flawless Onyx -> Diamond 4
+        gemFileMapping["g$e"] = "gemd4";  // Perfect Onyx -> Diamond 4
+    }
+    
+    QString result = gemFileMapping.value(gemCode, QString());
+    qDebug() << "Gem code" << gemCode << "mapped to file:" << result;
+    return result;
+}
+
+ItemInfo* GemCreationWidget::createBasicGem(const QString &gemCode)
+{
+    try {
+        // Create a basic gem with minimal valid structure
+        ItemInfo *gem = new ItemInfo();
+        
+        // Initialize basic fields manually (init() is private)
+        gem->plugyPage = 0;
+        gem->hasChanged = true;
+        gem->ilvl = 1;
+        gem->variableGraphicIndex = 0;
+        gem->location = 0; // Character inventory
+        gem->row = -1;
+        gem->column = -1;
+        gem->storage = 0; // Inventory
+        gem->whereEquipped = 0;
+        gem->shouldDeleteEverything = true;
+        
+        gem->itemType = gemCode.toUtf8();
+        gem->quality = 2; // Normal quality
+        gem->socketsNumber = 0;
+        gem->socketablesNumber = 0;
+        gem->isSocketed = false;
+        gem->isRW = false;
+        gem->isEthereal = false;
+        gem->isPersonalized = false;
+        
+        // Create a minimal valid bitString for a basic gem
+        // This is a simplified approach - in reality, bitStrings are complex
+        // but we create a minimal structure that the parser can handle
+        
+        // Basic JM item structure:
+        // 2 bytes: "JM" signature
+        // 4 bytes: item type (gem code)
+        // Additional minimal required fields to make it valid
+        QByteArray bitStringBytes;
+        
+        // JM signature (16 bits = 2 bytes)
+        bitStringBytes.append("JM");
+        
+        // Item type (32 bits = 4 bytes)
+        QByteArray typeBytes = gemCode.toUtf8();
+        while (typeBytes.length() < 4) typeBytes.append('\0');
+        bitStringBytes.append(typeBytes);
+        
+        // Simple flags and basic structure (simplified)
+        // Quality: Normal (2) - 4 bits
+        // Other basic fields to make a minimal valid item
+        QByteArray additionalData(10, 0); // 10 bytes of minimal data
+        additionalData[0] = 0x20; // Quality = 2 (normal) in lower 4 bits
+        additionalData[1] = 0x01; // Level = 1
+        bitStringBytes.append(additionalData);
+        
+        // Convert bytes to bit string (each byte becomes 8 bits)
+        QString bitString;
+        for (int i = 0; i < bitStringBytes.length(); i++) {
+            quint8 byte = static_cast<quint8>(bitStringBytes.at(i));
+            for (int bit = 7; bit >= 0; bit--) {
+                bitString.append((byte & (1 << bit)) ? '1' : '0');
+            }
+        }
+        
+        gem->bitString = bitString;
+        
+        qDebug() << "Created basic gem from scratch:" << gemCode;
+        qDebug() << "BitString length:" << gem->bitString.length();
+        
+        return gem;
+        
+    } catch (const std::exception& e) {
+        qWarning() << "Exception creating basic gem:" << e.what();
+        return nullptr;
+    } catch (...) {
+        qWarning() << "Unknown exception creating basic gem";
         return nullptr;
     }
 }
