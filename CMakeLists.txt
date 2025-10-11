@@ -96,6 +96,8 @@ if(NOT APPLE)
     target_compile_definitions(MedianXLOfflineTools PRIVATE HAS_QTSINGLEAPPLICATION=1)
 endif()
 
+# Test executables
+
 # install
 
 install(TARGETS MedianXLOfflineTools

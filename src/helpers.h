@@ -86,4 +86,7 @@ bool compareItemsByRlvl(ItemInfo *a, ItemInfo *b);
 bool compareItemsByRlvlAndEthereality(ItemInfo *a, ItemInfo *b);
 bool compareItemsByCode(ItemInfo *a, ItemInfo *b);
 
+// checksum utilities
+quint32 calculateSaveFileChecksum(const QByteArray &fileData);
+
 #endif // HELPERS_H

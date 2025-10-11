@@ -8,9 +8,7 @@
 #include <QFile>
 #include <QDataStream>
 
-#ifndef QT_NO_DEBUG
 #include <QDebug>
-#endif
 
 
 const QByteArray ItemParser::kItemHeader("JM");
@@ -153,6 +151,16 @@ ItemInfo *ItemParser::parseItem(QDataStream &inputDataStream, const QByteArray &
                     bitReader.skip(11);
 
                 ItemBase *itemBase = ItemDataBase::Items()->value(item->itemType);
+                // Provide a safe fallback ItemBase to avoid dereferencing NULL later in parsing
+                static ItemBase _fallbackItemBase;
+                if (!itemBase) {
+                    qDebug() << "ItemParser: WARNING - ItemDataBase::Items() returned NULL for itemType:" << item->itemType;
+                    _fallbackItemBase.name = "<unknown>";
+                    _fallbackItemBase.types.clear();
+                    _fallbackItemBase.isStackable = false;
+                    _fallbackItemBase.genericType = Enums::ItemTypeGeneric::Misc;
+                    itemBase = &_fallbackItemBase;
+                }
                 switch (item->quality)
                 {
                 case Enums::ItemQuality::Normal:
@@ -175,9 +183,11 @@ ItemInfo *ItemParser::parseItem(QDataStream &inputDataStream, const QByteArray &
                 case Enums::ItemQuality::Honorific:
                     bitReader.skip(16); // no idea what these bits mean
                     break;
-                default:
-                    qDebug("Item '%s' of unknown quality %d found!", itemBase->name.toUtf8().constData(), item->quality);
+                default: {
+                    QString baseName = itemBase ? itemBase->name : QString("<unknown>");
+                    qDebug("Item '%s' of unknown quality %d found!", baseName.toUtf8().constData(), item->quality);
                     break;
+                }
                 }
 
                 if (item->isRW)

@@ -414,6 +414,7 @@ void MedianXLOfflineTools::switchLanguage(QAction *languageAction)
 
 void MedianXLOfflineTools::setModified(bool modified)
 {
+    qDebug() << "MedianXLOfflineTools::setModified called with" << modified;
     setWindowModified(modified);
     ui->actionSaveCharacter->setEnabled(modified);
 }

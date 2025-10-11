@@ -1,11 +1,13 @@
 #include "itemspropertiessplitter.h"
 #include "propertiesviewerwidget.h"
+#include "propertyeditor.h"
 #include "itemdatabase.h"
 #include "itemstoragetableview.h"
 #include "itemstoragetablemodel.h"
 #include "itemparser.h"
 #include "resourcepathmanager.hpp"
 #include "itemsviewerdialog.h"
+#include "plugyitemssplitter.h"
 #include "reversebitwriter.h"
 #include "characterinfo.hpp"
 #include "progressbarmodal.hpp"
@@ -20,8 +22,17 @@
 #include <QClipboard>
 #include <QVBoxLayout>
 #include <QPushButton>
+#include <QBuffer>
 
 #include <QDebug>
+#include <QFileDialog>
+#include <QFile>
+#include <QMessageBox>
+#include <QProcess>
+#include <QDialog>
+#include <QVBoxLayout>
+#include <QTextEdit>
+#include <QPushButton>
 
 #ifdef DUMP_INFO_ACTION
 #include <QTextCodec>
@@ -348,6 +359,19 @@ void ItemsPropertiesSplitter::showContextMenu(const QPoint &pos)
         }
 
         actions << separatorAction() << _itemActions[Delete];
+#if 1
+    QAction *exportD2iAction = new QAction(tr("Export as .d2i"), this);
+    connect(exportD2iAction, SIGNAL(triggered()), SLOT(exportItemAsD2i()));
+    actions << separatorAction() << exportD2iAction;
+
+    QAction *importD2iAction = new QAction(tr("Import from .d2i"), this);
+    connect(importD2iAction, SIGNAL(triggered()), SLOT(importItemFromD2i()));
+    actions << importD2iAction;
+
+    QAction *editD2iAction = new QAction(tr("Edit .d2i file..."), this);
+    connect(editD2iAction, SIGNAL(triggered()), SLOT(editD2iFile()));
+    actions << editD2iAction;
+#endif
 #ifdef DUMP_INFO_ACTION
         QAction *dumpInfoAction = new QAction("Dump info", this);
         connect(dumpInfoAction, SIGNAL(triggered()), SLOT(dumpInfo()));
@@ -380,11 +404,545 @@ void ItemsPropertiesSplitter::showContextMenu(const QPoint &pos)
             connect(createCrystalAction, SIGNAL(triggered()), this, SLOT(createArcaneCrystalAt()));
             actions << createCrystalAction;
         }
+
+        QAction *createShrineAction = new QAction(QString("Create Shrine..."), this);
+        if (createShrineAction) {
+            createShrineAction->setData(QPoint(clickedIndex.row(), clickedIndex.column()));
+            connect(createShrineAction, SIGNAL(triggered()), this, SLOT(createShrineAt()));
+            actions << createShrineAction;
+        }
+        
+        // Add Import .d2i action for empty cell (place imported item at clicked coordinates)
+        QAction *importEmptyD2iAction = new QAction(QString("Import from .d2i..."), this);
+        if (importEmptyD2iAction) {
+            importEmptyD2iAction->setData(QPoint(clickedIndex.row(), clickedIndex.column()));
+            connect(importEmptyD2iAction, SIGNAL(triggered()), this, SLOT(importItemFromD2iAt()));
+            actions << importEmptyD2iAction;
+        }
         
         if (!actions.isEmpty()) {
             QMenu::exec(actions, _itemsView->mapToGlobal(pos));
         }
     }
+}
+
+void ItemsPropertiesSplitter::exportItemAsD2i()
+{
+    ItemInfo *item = selectedItem(true);
+    if (!item)
+        return;
+
+    QString suggested = QString("%1_%2.d2i").arg(QString::fromLatin1(item->itemType)).arg(QString::number(item->guid));
+    QString fileName = QFileDialog::getSaveFileName(this, tr("Export item as .d2i"), suggested, tr("Diablo II Item (*.d2i);;All files (*)"));
+    if (fileName.isEmpty())
+        return;
+
+    // Serialize item using canonical writer to ensure header and byte ordering match ItemParser
+    QByteArray out;
+    QBuffer buffer(&out);
+    buffer.open(QIODevice::WriteOnly);
+    QDataStream ds(&buffer);
+    ds.setByteOrder(QDataStream::LittleEndian);
+
+    ItemsList list;
+    list.append(item);
+    ItemParser::writeItems(list, ds);
+    buffer.close();
+
+    QFile f(fileName);
+    if (!f.open(QIODevice::WriteOnly))
+    {
+        QMessageBox::critical(this, tr("Export failed"), tr("Unable to open file for writing: %1").arg(fileName));
+        return;
+    }
+
+    // Debug: log bitString and hex of written bytes to help diagnose mismatches
+#ifndef QT_NO_DEBUG
+    qDebug() << "Export .d2i: item->bitString (len)" << item->bitString.length() << item->bitString.left(128);
+    qDebug() << "Export .d2i: written bytes hex:" << out.toHex(' ');
+#endif
+
+    qint64 written = f.write(out);
+    f.close();
+    if (written != out.size())
+    {
+        QMessageBox::warning(this, tr("Export incomplete"), tr("Wrote %1 bytes out of %2").arg(written).arg(out.size()));
+        return;
+    }
+    QMessageBox::information(this, tr("Export successful"), tr("Item exported to %1").arg(fileName));
+}
+
+void ItemsPropertiesSplitter::importItemFromD2i()
+{
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Import item from .d2i"), QString(), tr("Diablo II Item (*.d2i);;All files (*)"));
+    if (fileName.isEmpty())
+        return;
+
+    QFile f(fileName);
+    if (!f.open(QIODevice::ReadOnly))
+    {
+        ERROR_BOX(QString("Unable to open %1: %2").arg(fileName).arg(f.errorString()));
+        return;
+    }
+    QByteArray bytes = f.readAll();
+    f.close();
+
+    QDataStream ds(bytes);
+    ds.setByteOrder(QDataStream::LittleEndian);
+
+    ItemInfo *item = ItemParser::parseItem(ds, bytes);
+    if (!item)
+    {
+        ERROR_BOX(tr("Failed to parse item from file %1").arg(fileName));
+        return;
+    }
+
+    // default placement: add to selected storage, otherwise use active ItemsViewerDialog tab
+    ItemInfo *sel = selectedItem(false);
+    int storage = -1;
+    if (sel)
+        storage = sel->storage;
+    else
+    {
+        ItemsViewerDialog *viewer = qobject_cast<ItemsViewerDialog *>(this->window());
+        if (!viewer)
+        {
+            // fallback to walking up the parent chain (older approach)
+            QWidget *p = parentWidget();
+            while (p) { viewer = qobject_cast<ItemsViewerDialog *>(p); if (viewer) break; p = p->parentWidget(); }
+        }
+
+        if (viewer)
+        {
+            int tab = viewer->tabWidget()->currentIndex();
+            if (tab <= ItemsViewerDialog::InventoryIndex)
+                storage = tab;
+            else if (tab == ItemsViewerDialog::CubeIndex)
+                storage = tab + 2;
+            else
+                storage = tab + 3;
+        }
+        else
+            storage = Enums::ItemStorage::Inventory;
+    }
+    // ask how many copies to import
+    bool ok = false;
+    int copies = QInputDialog::getInt(this, tr("Import copies"), tr("Number of copies:"), 1, 1, 999, 1, &ok);
+    if (!ok)
+    {
+        delete item;
+        return;
+    }
+
+    item->storage = storage;
+    item->row = -1; item->column = -1;
+    item->hasChanged = true;
+
+    int rows = ItemsViewerDialog::rowsInStorageAtIndex(storage);
+    int cols = ItemsViewerDialog::colsInStorageAtIndex(storage);
+    int successCount = 0;
+
+    for (int i = 0; i < copies; ++i)
+    {
+        ItemInfo *newItem = new ItemInfo(*item);
+        newItem->hasChanged = true;
+        newItem->storage = storage;
+        newItem->row = -1; newItem->column = -1;
+
+        bool stored = ItemDataBase::storeItemIn(newItem, static_cast<Enums::ItemStorage::ItemStorageEnum>(storage), rows, cols);
+        if (!stored)
+        {
+            qDebug() << "[DEBUG] importItemFromD2i: storeItemIn failed for storage" << storage << "for copy" << i+1;
+            addItemToList(newItem);
+            WARNING_BOX(tr("Item imported but could not be placed in storage %1. Added to list without coordinates.").arg(storage));
+        }
+        else
+        {
+            addItemToList(newItem);
+            ++successCount;
+        }
+    }
+
+    delete item;
+    if (successCount > 0)
+        INFO_BOX(tr("Imported %1 item(s) from %2").arg(successCount).arg(fileName));
+}
+
+void ItemsPropertiesSplitter::importItemFromD2iAt()
+{
+    QAction *action = qobject_cast<QAction *>(sender());
+    if (!action)
+        return;
+
+    QPoint pos = action->data().toPoint();
+
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Import item from .d2i"), QString(), tr("Diablo II Item (*.d2i);;All files (*)"));
+    if (fileName.isEmpty())
+        return;
+
+    QFile f(fileName);
+    if (!f.open(QIODevice::ReadOnly))
+    {
+        ERROR_BOX(QString("Unable to open %1: %2").arg(fileName).arg(f.errorString()));
+        return;
+    }
+    QByteArray bytes = f.readAll();
+    f.close();
+
+    QDataStream ds(bytes);
+    ds.setByteOrder(QDataStream::LittleEndian);
+
+    ItemInfo *item = ItemParser::parseItem(ds, bytes);
+    if (!item)
+    {
+        ERROR_BOX(tr("Failed to parse item from file %1").arg(fileName));
+        return;
+    }
+
+    // place at clicked coordinates inside current storage (try exact, then nearest free, then fallback)
+    ItemInfo *sel2 = selectedItem(false);
+    int storage2 = -1;
+    if (sel2)
+        storage2 = sel2->storage;
+    else
+    {
+        ItemsViewerDialog *viewer = qobject_cast<ItemsViewerDialog *>(this->window());
+        if (!viewer)
+        {
+            QWidget *p = parentWidget();
+            while (p) { viewer = qobject_cast<ItemsViewerDialog *>(p); if (viewer) break; p = p->parentWidget(); }
+        }
+
+        if (viewer)
+        {
+            int tab = viewer->tabWidget()->currentIndex();
+            if (tab <= ItemsViewerDialog::InventoryIndex)
+                storage2 = tab;
+            else if (tab == ItemsViewerDialog::CubeIndex)
+                storage2 = tab + 2;
+            else
+                storage2 = tab + 3;
+        }
+        else
+            storage2 = Enums::ItemStorage::Inventory;
+    }
+    item->storage = storage2;
+    item->row = pos.x(); item->column = pos.y();
+    item->hasChanged = true;
+
+    int rows = ItemsViewerDialog::rowsInStorageAtIndex(storage2);
+    int cols = ItemsViewerDialog::colsInStorageAtIndex(storage2);
+    {
+        int tabIdx = ItemsViewerDialog::tabIndexFromItemStorage(storage2);
+        QString tabName = ItemsViewerDialog::tabNameAtIndex(tabIdx);
+        qDebug() << "[DEBUG] importItemFromD2iAt: chosen storage=" << storage2 << "(" << tabName << ") pos=" << item->row << item->column << "rows=" << rows << "cols=" << cols;
+    }
+
+    // ask how many copies to import
+    bool ok = false;
+    int copies = QInputDialog::getInt(this, tr("Import copies"), tr("Number of copies:"), 1, 1, 999, 1, &ok);
+    if (!ok)
+    {
+        delete item;
+        return;
+    }
+
+    int successCount = 0;
+
+    // Try nearest free slot (search border-by-border around requested coordinates)
+    auto findNearestFree = [&](int desiredRow, int desiredCol, const ItemsList &items) -> QPair<int,int>
+    {
+        int maxRadius = qMax(rows, cols);
+        for (int r = 0; r <= maxRadius; ++r)
+        {
+            for (int dy = -r; dy <= r; ++dy)
+            {
+                for (int dx = -r; dx <= r; ++dx)
+                {
+                    if (qAbs(dy) != r && qAbs(dx) != r) continue;
+                    int rr = desiredRow + dy;
+                    int cc = desiredCol + dx;
+                    if (rr < 0 || cc < 0 || rr >= rows || cc >= cols) continue;
+                    if (ItemDataBase::canStoreItemAt(rr, cc, item->itemType, items, rows, cols))
+                        return qMakePair(rr, cc);
+                }
+            }
+        }
+        return qMakePair(-1, -1);
+    };
+
+    auto tryPlaceOne = [&](ItemInfo *it) -> bool {
+        // exact placement
+        bool canExactLocal = ItemDataBase::canStoreItemAt(it->row, it->column, it->itemType, _allItems, rows, cols);
+        qDebug() << "[DEBUG] importItemFromD2iAt: exact placement check at" << it->row << it->column << "->" << canExactLocal;
+        if (canExactLocal)
+        {
+            it->move(it->row, it->column, it->plugyPage);
+            it->storage = storage2;
+            ReverseBitWriter::replaceValueInBitString(it->bitString, Enums::ItemOffsets::Storage, isInExternalStorage(it) ? Enums::ItemStorage::Stash : it->storage);
+            ReverseBitWriter::replaceValueInBitString(it->bitString, Enums::ItemOffsets::Location, it->location);
+            addItemToList(it);
+            setCurrentStorageHasChanged();
+            emit itemsChanged();
+            return true;
+        }
+
+        // nearest
+        PlugyItemsSplitter *plugyLocal = dynamic_cast<PlugyItemsSplitter *>(this);
+        if (plugyLocal)
+        {
+            quint32 page = plugyLocal->currentPage();
+            ItemsList itemsOnPage = ItemDataBase::itemsStoredIn(storage2, Enums::ItemLocation::Stored, &page);
+            QPair<int,int> p = findNearestFree(it->row, it->column, itemsOnPage);
+            qDebug() << "[DEBUG] importItemFromD2iAt: plugy itemsOnPage count=" << itemsOnPage.size() << "nearest->" << p.first << p.second;
+            if (p.first >= 0)
+            {
+                it->move(p.first, p.second, page);
+                it->storage = storage2;
+                ReverseBitWriter::replaceValueInBitString(it->bitString, Enums::ItemOffsets::Storage, isInExternalStorage(it) ? Enums::ItemStorage::Stash : it->storage);
+                ReverseBitWriter::replaceValueInBitString(it->bitString, Enums::ItemOffsets::Location, it->location);
+                addItemToList(it);
+                setCurrentStorageHasChanged();
+                emit itemsChanged();
+                return true;
+            }
+        }
+        else
+        {
+            ItemsList items = ItemDataBase::itemsStoredIn(storage2, Enums::ItemLocation::Stored);
+            QPair<int,int> p = findNearestFree(it->row, it->column, items);
+            qDebug() << "[DEBUG] importItemFromD2iAt: non-plugy items count=" << items.size() << "nearest->" << p.first << p.second;
+            if (p.first >= 0)
+            {
+                it->move(p.first, p.second, it->plugyPage);
+                it->storage = storage2;
+                ReverseBitWriter::replaceValueInBitString(it->bitString, Enums::ItemOffsets::Storage, isInExternalStorage(it) ? Enums::ItemStorage::Stash : it->storage);
+                ReverseBitWriter::replaceValueInBitString(it->bitString, Enums::ItemOffsets::Location, it->location);
+                addItemToList(it);
+                setCurrentStorageHasChanged();
+                emit itemsChanged();
+                return true;
+            }
+        }
+
+        // fallback storeItemIn
+        if (ItemDataBase::storeItemIn(it, static_cast<Enums::ItemStorage::ItemStorageEnum>(storage2), rows, cols))
+        {
+            addItemToList(it);
+            return true;
+        }
+
+        // couldn't place
+        addItemToList(it);
+        WARNING_BOX(tr("Item imported but could not be placed in storage %1 at coordinates (%2,%3). Added to list without coordinates.").arg(storage2).arg(it->row).arg(it->column));
+        return false;
+    };
+
+    // loop copies
+    for (int i = 0; i < copies; ++i)
+    {
+        ItemInfo *newItem = new ItemInfo(*item);
+        newItem->hasChanged = true;
+        newItem->row = item->row; newItem->column = item->column; newItem->storage = storage2;
+        if (tryPlaceOne(newItem))
+            ++successCount;
+    }
+
+    delete item;
+    if (successCount > 0)
+        INFO_BOX(tr("Imported %1 item(s) from %2").arg(successCount).arg(fileName));
+    return;
+}
+
+void ItemsPropertiesSplitter::editD2iFile()
+{
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Open .d2i file to edit"), QString(), tr("Diablo II Item (*.d2i);;All files (*)"));
+    if (fileName.isEmpty())
+        return;
+
+    QFile f(fileName);
+    if (!f.open(QIODevice::ReadOnly))
+    {
+        ERROR_BOX(QString("Unable to open %1: %2").arg(fileName).arg(f.errorString()));
+        return;
+    }
+    QByteArray bytes = f.readAll();
+    f.close();
+
+    QDataStream ds(bytes);
+    ds.setByteOrder(QDataStream::LittleEndian);
+
+    ItemInfo *item = ItemParser::parseItem(ds, bytes);
+    if (!item)
+    {
+        ERROR_BOX(tr("Failed to parse item from file %1").arg(fileName));
+        return;
+    }
+
+    // Show property editor for the parsed item
+    if (!_propertiesWidget)
+        return;
+
+    // Reuse the existing PropertyEditor by opening it and setting the item
+    _propertiesWidget->openPropertyEditor();
+    PropertyEditor *editor = _propertiesWidget->findChild<PropertyEditor *>();
+    if (!editor)
+    {
+        ERROR_BOX(tr("Property editor not available"));
+        delete item;
+        return;
+    }
+
+    // Set the parsed item into the editor
+    editor->setItem(item);
+
+    // Connect to itemChanged signal to save back to file when user applies changes
+    connect(editor, &PropertyEditor::itemChanged, this, [this, item, fileName]() {
+        // Serialize the item back to bytes using ItemParser::writeItems
+        QByteArray out;
+        QBuffer buffer(&out);
+        buffer.open(QIODevice::WriteOnly);
+        QDataStream dsOut(&buffer);
+        dsOut.setByteOrder(QDataStream::LittleEndian);
+
+        ItemsList list;
+        list.append(item);
+        ItemParser::writeItems(list, dsOut);
+        buffer.close();
+
+        // Create a backup before overwriting
+        QString backupName = fileName + ".bak";
+        QFile backupFile(backupName);
+        bool backupOk = true;
+        if (!backupFile.exists()) {
+            // write original bytes to backup
+            QFile orig(fileName);
+            if (orig.open(QIODevice::ReadOnly)) {
+                QByteArray origData = orig.readAll();
+                orig.close();
+                if (!backupFile.open(QIODevice::WriteOnly)) {
+                    backupOk = false;
+                } else {
+                    backupFile.write(origData);
+                    backupFile.close();
+                }
+            } else {
+                backupOk = false;
+            }
+        }
+
+        if (!backupOk) {
+            if (QUESTION_BOX_YESNO(tr("Failed to create backup '%1'. Continue without backup?").arg(backupName), QMessageBox::No) == QMessageBox::No) {
+                WARNING_BOX(tr("Aborted save due to backup failure"));
+                return;
+            }
+        }
+
+        QFile outf(fileName);
+        if (!outf.open(QIODevice::WriteOnly))
+        {
+            ERROR_BOX(tr("Unable to open %1 for writing: %2").arg(fileName).arg(outf.errorString()));
+            return;
+        }
+        // out already contains JM+item bytes because writeItems writes header and bytes
+        qint64 written = outf.write(out);
+        outf.close();
+        if (written != out.size())
+        {
+            WARNING_BOX(tr("Wrote %1 bytes out of %2").arg(written).arg(out.size()));
+            return;
+        }
+
+        // Round-trip verification: attempt to parse the file we just wrote
+        QFile verifyF(fileName);
+        if (!verifyF.open(QIODevice::ReadOnly)) {
+            ERROR_BOX(tr("Saved file but cannot open %1 for verification: %2").arg(fileName).arg(verifyF.errorString()));
+            return;
+        }
+        QByteArray writtenBytes = verifyF.readAll();
+        verifyF.close();
+
+        QDataStream verifyDs(writtenBytes);
+        verifyDs.setByteOrder(QDataStream::LittleEndian);
+        ItemInfo *verifiedItem = ItemParser::parseItem(verifyDs, writtenBytes);
+        if (!verifiedItem) {
+            // Run the inspector script if available to provide diagnostics
+            QString inspector = QCoreApplication::applicationDirPath() + "/../tools/inspect_d2i.py";
+            QString inspectorOutput;
+            if (QFile::exists(inspector)) {
+                QProcess proc;
+                proc.start("/usr/bin/env", QStringList() << "python3" << inspector << fileName);
+                if (proc.waitForFinished(3000)) {
+                    inspectorOutput = proc.readAllStandardOutput();
+                    inspectorOutput += "\n";
+                    inspectorOutput += proc.readAllStandardError();
+                } else {
+                    inspectorOutput = tr("Inspector timed out after 3s");
+                }
+            } else {
+                inspectorOutput = tr("Inspector not found at %1").arg(inspector);
+            }
+
+            // Restore backup if available
+            if (QFile::exists(backupName)) {
+                QFile::remove(fileName);
+                QFile::rename(backupName, fileName);
+            }
+
+            // Show diagnostics in a dialog
+            QDialog dlg(this);
+            dlg.setWindowTitle(tr("Verification failed - diagnostics"));
+            QVBoxLayout *layout = new QVBoxLayout(&dlg);
+            QTextEdit *out = new QTextEdit(&dlg);
+            out->setReadOnly(true);
+            out->setPlainText(inspectorOutput);
+            layout->addWidget(out);
+            QPushButton *closeBtn = new QPushButton(tr("Close"), &dlg);
+            connect(closeBtn, &QPushButton::clicked, &dlg, &QDialog::accept);
+            layout->addWidget(closeBtn);
+            dlg.resize(800, 600);
+            dlg.exec();
+
+            ERROR_BOX(tr("Verification failed: written file cannot be parsed. Restored backup. See diagnostics for details."));
+            return;
+        }
+        delete verifiedItem;
+
+        // For detailed verification, re-parse the saved bytes into an ItemInfo and display properties
+        QDataStream finalDs(writtenBytes);
+        finalDs.setByteOrder(QDataStream::LittleEndian);
+        ItemInfo *finalItem = ItemParser::parseItem(finalDs, writtenBytes);
+        if (finalItem) {
+            // Build a human-readable report of parsed properties
+            QStringList lines;
+            lines << tr("Parsed properties:");
+            for (auto it = finalItem->props.constBegin(); it != finalItem->props.constEnd(); ++it) {
+                ItemProperty *p = it.value();
+                int id = it.key();
+                ItemPropertyTxt *txt = ItemDataBase::Properties()->value(id);
+                QString display = p->displayString.isEmpty() ? (txt ? QString::fromUtf8(txt->stat) : tr("Unknown(%1)").arg(id)) : p->displayString;
+                lines << QString("ID=%1 param=%2 value=%3 -> %4").arg(id).arg(p->param).arg(p->value).arg(display);
+            }
+
+            // Show report in dialog
+            QDialog reportDlg(this);
+            reportDlg.setWindowTitle(tr("Verification report - %1").arg(fileName));
+            QVBoxLayout *reportLayout = new QVBoxLayout(&reportDlg);
+            QTextEdit *reportOut = new QTextEdit(&reportDlg);
+            reportOut->setReadOnly(true);
+            reportOut->setPlainText(lines.join('\n'));
+            reportLayout->addWidget(reportOut);
+            QPushButton *closeBtn2 = new QPushButton(tr("Close"), &reportDlg);
+            connect(closeBtn2, &QPushButton::clicked, &reportDlg, &QDialog::accept);
+            reportLayout->addWidget(closeBtn2);
+            reportDlg.resize(700, 400);
+            reportDlg.exec();
+
+            delete finalItem;
+        }
+
+        INFO_BOX(tr("Saved edited .d2i to %1 and verification passed").arg(fileName));
+    });
 }
 
 ItemInfo *ItemsPropertiesSplitter::selectedItem(bool showError /*= true*/)
@@ -628,8 +1186,9 @@ void ItemsPropertiesSplitter::personalize()
     item->inscribedName = personalizationName.toLatin1();
     const char *personalizationNameCstr = item->inscribedName.constData();
     QString personalizationNameBitString;
+    // Build bitstring by appending each character's bits in order (non-destructive)
     for (quint8 i = 0; i < personalizationName.length() + 1; ++i) // trailing \0 must also be written
-        personalizationNameBitString.prepend(binaryStringFromNumber(personalizationNameCstr[i], false, ItemParser::kInscribedNameCharacterLength));
+        personalizationNameBitString.append(binaryStringFromNumber(personalizationNameCstr[i], false, ItemParser::kInscribedNameCharacterLength));
     ReverseBitWriter::insert(item->bitString, item->inscribedNameOffset, personalizationNameBitString);
 
     ReverseBitWriter::byteAlignBits(item->bitString);
@@ -668,30 +1227,115 @@ void ItemsPropertiesSplitter::createRuneAt()
             if (newRune)
             {
                 qDebug() << "Using cube upgrade method to store rune:" << newRune->itemType;
-                
-                // Use exact same method as cube upgrade - storeItemInStorage handles everything
-                if (!storeItemInStorage(newRune, Enums::ItemStorage::Inventory, true)) {
-                    QMessageBox::warning(this, tr("Storage Failed"), 
-                        tr("Failed to store rune in inventory!"));
-                    delete newRune;
-                    return;
+
+                // Determine target storage: use selected item's storage; if none selected, use active ItemsViewerDialog tab
+                ItemInfo *sel = selectedItem(false);
+                int storage = -1;
+                if (sel)
+                    storage = sel->storage;
+                else
+                {
+                    ItemsViewerDialog *viewer = nullptr;
+                    QWidget *p = parentWidget();
+                    while (p) { viewer = qobject_cast<ItemsViewerDialog *>(p); if (viewer) break; p = p->parentWidget(); }
+                    if (viewer)
+                    {
+                        int tab = viewer->tabWidget()->currentIndex();
+                        if (tab <= ItemsViewerDialog::InventoryIndex)
+                            storage = tab;
+                        else if (tab == ItemsViewerDialog::CubeIndex)
+                            storage = tab + 2; // inverse of tabIndexFromItemStorage
+                        else
+                            storage = tab + 3;
+                    }
+                    else
+                        storage = Enums::ItemStorage::Inventory;
                 }
-                
+
+                // Try to place at clicked coordinates or nearest free slot in current storage/page
+                bool placed = false;
+                PlugyItemsSplitter *plugy = dynamic_cast<PlugyItemsSplitter *>(this);
+                int rows = ItemsViewerDialog::rowsInStorageAtIndex(storage);
+                int cols = ItemsViewerDialog::colsInStorageAtIndex(storage);
+
+                // helper: search in spiral radius around desired position
+                auto findNearestFree = [&](int desiredRow, int desiredCol, quint32 plugyPage, ItemsList items) -> QPair<int,int>
+                {
+                    int maxRadius = qMax(rows, cols);
+                    for (int r = 0; r <= maxRadius; ++r)
+                    {
+                        for (int dy = -r; dy <= r; ++dy)
+                        {
+                            for (int dx = -r; dx <= r; ++dx)
+                            {
+                                // only check border of square of radius r to avoid duplicates
+                                if (qAbs(dy) != r && qAbs(dx) != r) continue;
+                                int rr = desiredRow + dy;
+                                int cc = desiredCol + dx;
+                                if (rr < 0 || cc < 0 || rr >= rows || cc >= cols) continue;
+                                if (ItemDataBase::canStoreItemAt(rr, cc, newRune->itemType, items, rows, cols))
+                                    return qMakePair(rr, cc);
+                            }
+                        }
+                    }
+                    return qMakePair(-1, -1);
+                };
+
+                if (plugy)
+                {
+                    quint32 page = plugy->currentPage();
+                    ItemsList itemsOnPage = ItemDataBase::itemsStoredIn(storage, Enums::ItemLocation::Stored, &page);
+                    QPair<int,int> p = findNearestFree(dialog->getCreatedRune()->row, dialog->getCreatedRune()->column, page, itemsOnPage);
+                    if (p.first >= 0)
+                    {
+                        newRune->move(p.first, p.second, page, true);
+                        newRune->storage = storage;
+                        newRune->location = Enums::ItemLocation::Stored;
+                        ReverseBitWriter::replaceValueInBitString(newRune->bitString, Enums::ItemOffsets::Storage, isInExternalStorage(newRune) ? Enums::ItemStorage::Stash : newRune->storage);
+                        ReverseBitWriter::replaceValueInBitString(newRune->bitString, Enums::ItemOffsets::Location, newRune->location);
+                        addItemToList(newRune, true);
+                        placed = true;
+                    }
+                }
+                else
+                {
+                    // non-plugy storages (inventory, cube, gear)
+                    ItemsList items = ItemDataBase::itemsStoredIn(storage, Enums::ItemLocation::Stored);
+                    QPair<int,int> p = findNearestFree(dialog->getCreatedRune()->row, dialog->getCreatedRune()->column, 0, items);
+                    if (p.first >= 0)
+                    {
+                        newRune->move(p.first, p.second, 0, true);
+                        newRune->storage = storage;
+                        newRune->location = Enums::ItemLocation::Stored;
+                        ReverseBitWriter::replaceValueInBitString(newRune->bitString, Enums::ItemOffsets::Storage, isInExternalStorage(newRune) ? Enums::ItemStorage::Stash : newRune->storage);
+                        ReverseBitWriter::replaceValueInBitString(newRune->bitString, Enums::ItemOffsets::Location, newRune->location);
+                        addItemToList(newRune, true);
+                        placed = true;
+                    }
+                }
+
+                // Fallback: let storeItemInStorage find any free slot (including other pages for plugy)
+                if (!placed)
+                {
+                    if (!storeItemInStorage(newRune, storage, true)) {
+                        QMessageBox::warning(this, tr("Storage Failed"), tr("Failed to store rune in storage %1!").arg(storage));
+                        delete newRune;
+                        dialog->deleteLater();
+                        return;
+                    }
+                }
+
                 // Mark as changed for save
                 setCurrentStorageHasChanged();
-                
+
                 // Emit signal to notify that items have changed
                 emit itemsChanged();
-                
-                qDebug() << "Rune added to character items. Total items now:" 
-                         << CharacterInfo::instance().items.character.size();
-                
+
+                qDebug() << "Rune added to items. Total items now:" << CharacterInfo::instance().items.character.size();
+
                 // Prompt user to save immediately
-                QMessageBox::information(this, tr("Rune Created"), 
-                    tr("Rune created successfully at position (%1, %2).\n\n"
-                       "Remember to save the character (Ctrl+S) to keep the changes!")
-                    .arg(newRune->row + 1).arg(newRune->column + 1));
-                
+                QMessageBox::information(this, tr("Rune Created"), tr("Rune created successfully at position (%1, %2).\n\n" "Remember to save the character (Ctrl+S) to keep the changes!").arg(newRune->row + 1).arg(newRune->column + 1));
+
                 // Show the item in the properties viewer
                 showItem(newRune);
             }
@@ -727,30 +1371,111 @@ void ItemsPropertiesSplitter::createGemAt()
             if (newGem)
             {
                 qDebug() << "Using cube upgrade method to store gem:" << newGem->itemType;
-                
-                // Use exact same method as cube upgrade - storeItemInStorage handles everything
-                if (!storeItemInStorage(newGem, Enums::ItemStorage::Inventory, true)) {
-                    QMessageBox::warning(this, tr("Storage Failed"), 
-                        tr("Failed to store gem in inventory!"));
-                    delete newGem;
-                    return;
+
+                // Determine target storage: use selected item's storage; if none selected, use active ItemsViewerDialog tab
+                ItemInfo *sel = selectedItem(false);
+                int storage = -1;
+                if (sel)
+                    storage = sel->storage;
+                else
+                {
+                    ItemsViewerDialog *viewer = nullptr;
+                    QWidget *p = parentWidget();
+                    while (p) { viewer = qobject_cast<ItemsViewerDialog *>(p); if (viewer) break; p = p->parentWidget(); }
+                    if (viewer)
+                    {
+                        int tab = viewer->tabWidget()->currentIndex();
+                        if (tab <= ItemsViewerDialog::InventoryIndex)
+                            storage = tab;
+                        else if (tab == ItemsViewerDialog::CubeIndex)
+                            storage = tab + 2; // inverse of tabIndexFromItemStorage
+                        else
+                            storage = tab + 3;
+                    }
+                    else
+                        storage = Enums::ItemStorage::Inventory;
                 }
-                
+
+                // Try to place at clicked coordinates or nearest free slot in current storage/page
+                bool placed = false;
+                PlugyItemsSplitter *plugy = dynamic_cast<PlugyItemsSplitter *>(this);
+                int rows = ItemsViewerDialog::rowsInStorageAtIndex(storage);
+                int cols = ItemsViewerDialog::colsInStorageAtIndex(storage);
+
+                auto findNearestFree = [&](int desiredRow, int desiredCol, quint32 plugyPage, ItemsList items) -> QPair<int,int>
+                {
+                    int maxRadius = qMax(rows, cols);
+                    for (int r = 0; r <= maxRadius; ++r)
+                    {
+                        for (int dy = -r; dy <= r; ++dy)
+                        {
+                            for (int dx = -r; dx <= r; ++dx)
+                            {
+                                if (qAbs(dy) != r && qAbs(dx) != r) continue;
+                                int rr = desiredRow + dy;
+                                int cc = desiredCol + dx;
+                                if (rr < 0 || cc < 0 || rr >= rows || cc >= cols) continue;
+                                if (ItemDataBase::canStoreItemAt(rr, cc, newGem->itemType, items, rows, cols))
+                                    return qMakePair(rr, cc);
+                            }
+                        }
+                    }
+                    return qMakePair(-1, -1);
+                };
+
+                if (plugy)
+                {
+                    quint32 page = plugy->currentPage();
+                    ItemsList itemsOnPage = ItemDataBase::itemsStoredIn(storage, Enums::ItemLocation::Stored, &page);
+                    QPair<int,int> p = findNearestFree(dialog->getCreatedGem()->row, dialog->getCreatedGem()->column, page, itemsOnPage);
+                    if (p.first >= 0)
+                    {
+                        newGem->move(p.first, p.second, page, true);
+                        newGem->storage = storage;
+                        newGem->location = Enums::ItemLocation::Stored;
+                        ReverseBitWriter::replaceValueInBitString(newGem->bitString, Enums::ItemOffsets::Storage, isInExternalStorage(newGem) ? Enums::ItemStorage::Stash : newGem->storage);
+                        ReverseBitWriter::replaceValueInBitString(newGem->bitString, Enums::ItemOffsets::Location, newGem->location);
+                        addItemToList(newGem, true);
+                        placed = true;
+                    }
+                }
+                else
+                {
+                    ItemsList items = ItemDataBase::itemsStoredIn(storage, Enums::ItemLocation::Stored);
+                    QPair<int,int> p = findNearestFree(dialog->getCreatedGem()->row, dialog->getCreatedGem()->column, 0, items);
+                    if (p.first >= 0)
+                    {
+                        newGem->move(p.first, p.second, 0, true);
+                        newGem->storage = storage;
+                        newGem->location = Enums::ItemLocation::Stored;
+                        ReverseBitWriter::replaceValueInBitString(newGem->bitString, Enums::ItemOffsets::Storage, isInExternalStorage(newGem) ? Enums::ItemStorage::Stash : newGem->storage);
+                        ReverseBitWriter::replaceValueInBitString(newGem->bitString, Enums::ItemOffsets::Location, newGem->location);
+                        addItemToList(newGem, true);
+                        placed = true;
+                    }
+                }
+
+                if (!placed)
+                {
+                    if (!storeItemInStorage(newGem, storage, true)) {
+                        QMessageBox::warning(this, tr("Storage Failed"), tr("Failed to store gem in storage %1!").arg(storage));
+                        delete newGem;
+                        dialog->deleteLater();
+                        return;
+                    }
+                }
+
                 // Mark as changed for save
                 setCurrentStorageHasChanged();
-                
+
                 // Emit signal to notify that items have changed
                 emit itemsChanged();
-                
-                qDebug() << "Gem added to character items. Total items now:" 
-                         << CharacterInfo::instance().items.character.size();
-                
+
+                qDebug() << "Gem added to items. Total items now:" << CharacterInfo::instance().items.character.size();
+
                 // Prompt user to save immediately
-                QMessageBox::information(this, tr("Gem Created"), 
-                    tr("Gem created successfully at position (%1, %2).\n\n"
-                       "Remember to save the character (Ctrl+S) to keep the changes!")
-                    .arg(newGem->row + 1).arg(newGem->column + 1));
-                
+                QMessageBox::information(this, tr("Gem Created"), tr("Gem created successfully at position (%1, %2).\n\n" "Remember to save the character (Ctrl+S) to keep the changes!").arg(newGem->row + 1).arg(newGem->column + 1));
+
                 // Show the item in the properties viewer
                 showItem(newGem);
             }
@@ -793,19 +1518,128 @@ void ItemsPropertiesSplitter::createArcaneCrystalAt()
                 int successCount = 0;
                 QList<ItemInfo*> successfulCrystals;
                 
+                // Determine target storage: use selected item's storage; if none selected, use active ItemsViewerDialog tab
+                ItemInfo *sel = selectedItem(false);
+                int storage = -1;
+                if (sel)
+                    storage = sel->storage;
+                else
+                {
+                    ItemsViewerDialog *viewer = nullptr;
+                    QWidget *p = parentWidget();
+                    while (p) { viewer = qobject_cast<ItemsViewerDialog *>(p); if (viewer) break; p = p->parentWidget(); }
+                    if (viewer)
+                    {
+                        int tab = viewer->tabWidget()->currentIndex();
+                        if (tab <= ItemsViewerDialog::InventoryIndex)
+                            storage = tab;
+                        else if (tab == ItemsViewerDialog::CubeIndex)
+                            storage = tab + 2;
+                        else
+                            storage = tab + 3;
+                    }
+                    else
+                        storage = Enums::ItemStorage::Inventory;
+                }
+
+                PlugyItemsSplitter *plugy = dynamic_cast<PlugyItemsSplitter *>(this);
+                int rows = ItemsViewerDialog::rowsInStorageAtIndex(storage);
+                int cols = ItemsViewerDialog::colsInStorageAtIndex(storage);
+
+                auto findNearestFree = [&](int desiredRow, int desiredCol, quint32 plugyPage, ItemsList items, const QByteArray &storeItemType) -> QPair<int,int>
+                {
+                    int maxRadius = qMax(rows, cols);
+                    for (int r = 0; r <= maxRadius; ++r)
+                    {
+                        for (int dy = -r; dy <= r; ++dy)
+                        {
+                            for (int dx = -r; dx <= r; ++dx)
+                            {
+                                if (qAbs(dy) != r && qAbs(dx) != r) continue;
+                                int rr = desiredRow + dy;
+                                int cc = desiredCol + dx;
+                                if (rr < 0 || cc < 0 || rr >= rows || cc >= cols) continue;
+                                if (ItemDataBase::canStoreItemAt(rr, cc, storeItemType, items, rows, cols))
+                                    return qMakePair(rr, cc);
+                            }
+                        }
+                    }
+                    return qMakePair(-1, -1);
+                };
+
                 for (int i = 0; i < newCrystals.size(); i++) {
                     ItemInfo* crystal = newCrystals.at(i);
-                    if (crystal) {
-                        qDebug() << "Storing Arcane Crystal" << (i+1) << "at position:" << crystal->row << crystal->column;
-                        
-                        // Use exact same method as cube upgrade - storeItemInStorage handles everything
-                        if (storeItemInStorage(crystal, Enums::ItemStorage::Inventory, true)) {
+                    if (!crystal) continue;
+                    qDebug() << "[DEBUG] Storing Arcane Crystal" << (i+1) << "initial pos:" << crystal->row << crystal->column << "target storage:" << storage;
+
+                    bool placed = false;
+                    if (plugy)
+                    {
+                        // guard: ensure plugy is valid and currentPage() accessible
+                        quint32 page = 0;
+                        try {
+                            page = plugy->currentPage();
+                        } catch (...) { qWarning() << "[DEBUG] plugy->currentPage() threw"; }
+
+                        qDebug() << "[DEBUG] PlugY path: page=" << page;
+                        ItemsList itemsOnPage = ItemDataBase::itemsStoredIn(storage, Enums::ItemLocation::Stored, &page);
+                        qDebug() << "[DEBUG] itemsOnPage count:" << itemsOnPage.size();
+                        QPair<int,int> p = findNearestFree(crystal->row, crystal->column, page, itemsOnPage, crystal->itemType);
+                        qDebug() << "[DEBUG] findNearestFree returned:" << p.first << p.second;
+                        if (p.first >= 0)
+                        {
+                            crystal->move(p.first, p.second, page, true);
+                            crystal->storage = storage;
+                            crystal->location = Enums::ItemLocation::Stored;
+                            ReverseBitWriter::replaceValueInBitString(crystal->bitString, Enums::ItemOffsets::Storage, isInExternalStorage(crystal) ? Enums::ItemStorage::Stash : crystal->storage);
+                            ReverseBitWriter::replaceValueInBitString(crystal->bitString, Enums::ItemOffsets::Location, crystal->location);
+                            addItemToList(crystal, true);
+                            placed = true;
+                        }
+                        else
+                        {
+                            qDebug() << "[DEBUG] PlugY branch: no nearest free slot found on page" << page;
+                        }
+                    }
+                    else
+                    {
+                        ItemsList items = ItemDataBase::itemsStoredIn(storage, Enums::ItemLocation::Stored);
+                        qDebug() << "[DEBUG] Non-PlugY path: items count:" << items.size();
+                        QPair<int,int> p = findNearestFree(crystal->row, crystal->column, 0, items, crystal->itemType);
+                        qDebug() << "[DEBUG] findNearestFree returned:" << p.first << p.second;
+                        if (p.first >= 0)
+                        {
+                            crystal->move(p.first, p.second, 0, true);
+                            crystal->storage = storage;
+                            crystal->location = Enums::ItemLocation::Stored;
+                            ReverseBitWriter::replaceValueInBitString(crystal->bitString, Enums::ItemOffsets::Storage, isInExternalStorage(crystal) ? Enums::ItemStorage::Stash : crystal->storage);
+                            ReverseBitWriter::replaceValueInBitString(crystal->bitString, Enums::ItemOffsets::Location, crystal->location);
+                            addItemToList(crystal, true);
+                            placed = true;
+                        }
+                        else
+                        {
+                            qDebug() << "[DEBUG] Non-PlugY branch: no nearest free slot found";
+                        }
+                    }
+
+                    if (!placed)
+                    {
+                        if (storeItemInStorage(crystal, storage, true))
+                        {
                             successCount++;
                             successfulCrystals.append(crystal);
-                        } else {
+                        }
+                        else
+                        {
                             qWarning() << "Failed to store Arcane Crystal at position" << crystal->row << crystal->column;
                             delete crystal;
                         }
+                    }
+                    else
+                    {
+                        successCount++;
+                        successfulCrystals.append(crystal);
                     }
                 }
                 
@@ -847,6 +1681,201 @@ void ItemsPropertiesSplitter::createArcaneCrystalAt()
         dialog->deleteLater();
     } catch (...) {
         // Silently handle exceptions
+    }
+}
+
+void ItemsPropertiesSplitter::createShrineAt()
+{
+    QAction *action = qobject_cast<QAction *>(sender());
+    if (!action) return;
+
+    QPoint position = action->data().toPoint();
+    if (position.x() < 0 || position.y() < 0) return;
+
+    // Gather shrine types from misc.tsv (try multiple candidate paths)
+    QString miscPath;
+    // 1) generated locale path under resources
+    QString genPath = QString("%1/txt_parser/generated/%2/misc.tsv").arg(LanguageManager::instance().resourcesPath).arg(LanguageManager::instance().modLocalization());
+    if (QFile::exists(genPath)) miscPath = genPath;
+    // 2) common path under resources
+    if (miscPath.isEmpty()) {
+        QString p = QString("%1/txt/misc.tsv").arg(LanguageManager::instance().resourcesPath);
+        if (QFile::exists(p)) miscPath = p;
+    }
+    // 3) repo utils fallback
+    if (miscPath.isEmpty()) {
+        // Try relative to application dir (useful when running from build/)
+        QString appDir = QCoreApplication::applicationDirPath();
+        QString repoPath1 = QDir(appDir).absoluteFilePath("../utils/txt_parser/txt/misc.tsv");
+        QString repoPath2 = QDir(appDir).absoluteFilePath("../../utils/txt_parser/txt/misc.tsv");
+        if (QFile::exists(repoPath1)) miscPath = repoPath1;
+        else if (QFile::exists(repoPath2)) miscPath = repoPath2;
+    }
+    // 4) resource path via ResourcePathManager (rare)
+    if (miscPath.isEmpty()) {
+        QString p = ResourcePathManager::dataPathForFileName("txt/misc.tsv");
+        if (QFile::exists(p)) miscPath = p;
+    }
+
+    QFile f(miscPath);
+    QList<QPair<QString, QString>> shrineEntries; // pair<displayName, code>
+    if (f.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        QTextStream in(&f);
+        QString header = in.readLine(); // skip header
+        while (!in.atEnd())
+        {
+            QString line = in.readLine();
+            if (line.trimmed().isEmpty()) continue;
+            QStringList cols = line.split('\t');
+            if (cols.size() < 6) continue;
+            QString name = cols.at(0).trimmed();
+            QString code = cols.at(5).trimmed();
+            if (name.isEmpty() || code.isEmpty()) continue;
+            // filter by lines that contain 'Shrine' in name
+            if (name.contains("Shrine", Qt::CaseInsensitive))
+                shrineEntries.append(qMakePair(name, code));
+        }
+        f.close();
+    }
+
+    if (shrineEntries.isEmpty())
+    {
+        ERROR_BOX(tr("No shrine types found in misc.tsv"));
+        return;
+    }
+
+    // Let user pick shrine type (simple combo)
+    QStringList options;
+    for (auto &p : shrineEntries)
+        options << QString("%1 (%2)").arg(p.first).arg(p.second);
+
+    bool ok = false;
+    QString choice = QInputDialog::getItem(this, tr("Select Shrine type"), tr("Shrine:"), options, 0, false, &ok);
+    if (!ok || choice.isEmpty()) return;
+
+    int idx = options.indexOf(choice);
+    if (idx < 0) return;
+    QString chosenCode = shrineEntries.at(idx).second;
+
+    // ask quantity
+    int copies = QInputDialog::getInt(this, tr("Number of Shrines"), tr("Number of shrines to create:"), 1, 1, 999, 1, &ok);
+    if (!ok) return;
+
+    // Load shrine template - prefer specific shrine.d2i name if exists, otherwise try generic "shrine"
+    QString shrineTemplate = QString("shrine");
+    ItemInfo *templateItem = ItemDataBase::loadItemFromFile(shrineTemplate);
+    if (!templateItem)
+    {
+        ERROR_BOX(tr("Failed to load shrine template (shrine.d2i)"));
+        return;
+    }
+
+    // override template itemType to chosen code
+    templateItem->itemType = chosenCode.toLatin1();
+    ReverseBitWriter::replaceValueInBitString(templateItem->bitString, Enums::ItemOffsets::Type, templateItem->itemType.at(0));
+
+    // Prepare storage resolution similar to other create* handlers
+    ItemInfo *sel = selectedItem(false);
+    int storage = -1;
+    if (sel)
+        storage = sel->storage;
+    else
+    {
+        ItemsViewerDialog *viewer = nullptr;
+        QWidget *p = parentWidget();
+        while (p) { viewer = qobject_cast<ItemsViewerDialog *>(p); if (viewer) break; p = p->parentWidget(); }
+        if (viewer)
+        {
+            int tab = viewer->tabWidget()->currentIndex();
+            if (tab <= ItemsViewerDialog::InventoryIndex) storage = tab;
+            else if (tab == ItemsViewerDialog::CubeIndex) storage = tab + 2;
+            else storage = tab + 3;
+        }
+        else storage = Enums::ItemStorage::Inventory;
+    }
+
+    PlugyItemsSplitter *plugy = dynamic_cast<PlugyItemsSplitter *>(this);
+    int rows = ItemsViewerDialog::rowsInStorageAtIndex(storage);
+    int cols = ItemsViewerDialog::colsInStorageAtIndex(storage);
+
+    auto findNearestFree = [&](int desiredRow, int desiredCol, const ItemsList &items, const QByteArray &storeItemType) -> QPair<int,int>
+    {
+        int maxRadius = qMax(rows, cols);
+        for (int r = 0; r <= maxRadius; ++r)
+        {
+            for (int dy = -r; dy <= r; ++dy)
+            {
+                for (int dx = -r; dx <= r; ++dx)
+                {
+                    if (qAbs(dy) != r && qAbs(dx) != r) continue;
+                    int rr = desiredRow + dy;
+                    int cc = desiredCol + dx;
+                    if (rr < 0 || cc < 0 || rr >= rows || cc >= cols) continue;
+                    if (ItemDataBase::canStoreItemAt(rr, cc, storeItemType, items, rows, cols))
+                        return qMakePair(rr, cc);
+                }
+            }
+        }
+        return qMakePair(-1, -1);
+    };
+
+    int success = 0;
+    for (int i = 0; i < copies; ++i)
+    {
+        ItemInfo *it = new ItemInfo(*templateItem);
+        it->hasChanged = true;
+        it->row = position.x(); it->column = position.y(); it->storage = storage;
+
+        bool placed = false;
+        if (plugy)
+        {
+            quint32 page = plugy->currentPage();
+            ItemsList itemsOnPage = ItemDataBase::itemsStoredIn(storage, Enums::ItemLocation::Stored, &page);
+            QPair<int,int> p = findNearestFree(it->row, it->column, itemsOnPage, it->itemType);
+            if (p.first >= 0)
+            {
+                it->move(p.first, p.second, page);
+                it->storage = storage;
+                ReverseBitWriter::replaceValueInBitString(it->bitString, Enums::ItemOffsets::Storage, isInExternalStorage(it) ? Enums::ItemStorage::Stash : it->storage);
+                ReverseBitWriter::replaceValueInBitString(it->bitString, Enums::ItemOffsets::Location, it->location);
+                addItemToList(it);
+                placed = true;
+            }
+        }
+        else
+        {
+            ItemsList items = ItemDataBase::itemsStoredIn(storage, Enums::ItemLocation::Stored);
+            QPair<int,int> p = findNearestFree(it->row, it->column, items, it->itemType);
+            if (p.first >= 0)
+            {
+                it->move(p.first, p.second, it->plugyPage);
+                it->storage = storage;
+                ReverseBitWriter::replaceValueInBitString(it->bitString, Enums::ItemOffsets::Storage, isInExternalStorage(it) ? Enums::ItemStorage::Stash : it->storage);
+                ReverseBitWriter::replaceValueInBitString(it->bitString, Enums::ItemOffsets::Location, it->location);
+                addItemToList(it);
+                placed = true;
+            }
+        }
+
+        if (!placed)
+        {
+            if (!storeItemInStorage(it, storage, true))
+            {
+                addItemToList(it);
+                WARNING_BOX(tr("Shrine created but could not be placed in storage %1. Added to list without coordinates.").arg(storage));
+            }
+            else ++success;
+        }
+        else ++success;
+    }
+
+    delete templateItem;
+    if (success > 0)
+    {
+        setCurrentStorageHasChanged();
+        emit itemsChanged();
+        INFO_BOX(tr("Created %1 shrine(s)").arg(success));
     }
 }
 

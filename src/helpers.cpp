@@ -382,3 +382,20 @@ bool compareItemsByCode(ItemInfo *a, ItemInfo *b)
 {
     return a->itemType < b->itemType;
 }
+
+quint32 calculateSaveFileChecksum(const QByteArray &fileData)
+{
+    quint32 sum = 0;
+    for (int i = 0, n = fileData.size(); i < n; ++i)
+    {
+        bool mostSignificantByte = sum & 0x80000000;
+        sum <<= 1;
+        sum += mostSignificantByte;
+        sum &= 0xFFFFFFFF;
+        // Skip checksum bytes at offset 0xC (12-15)
+        if (i < 0xC || i >= 0xC + 4) {
+            sum += static_cast<quint8>(fileData.at(i));
+        }
+    }
+    return sum;
+}

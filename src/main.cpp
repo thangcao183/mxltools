@@ -5,6 +5,13 @@
 #include <QLocale>
 #include <QTranslator>
 
+#include "itemparser.h"
+#include <QFile>
+#include <QBuffer>
+#include <QDataStream>
+#include <QDebug>
+#include <QApplication>
+
 static QString dataPath(const QApplication &app)
 {
 #ifdef DATA_PATH
@@ -21,6 +28,8 @@ static QString dataPath(const QApplication &app)
 
 int main(int argc, char *argv[])
 {
+    // ...existing code...
+
     Application app(argc, argv);
 #if HAS_QTSINGLEAPPLICATION
     if (app.isRunning())

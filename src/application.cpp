@@ -40,7 +40,14 @@ Application::Application(int &argc, char **argv) : QAPP_CLASS(argc, argv), _main
 
     setOrganizationName("kambala");
     setApplicationName(kAppName);
+#ifdef NVER_STRING
     setApplicationVersion(NVER_STRING);
+#else
+    // NVER_STRING may be defined only for full application builds.
+    // For small CLI/test targets we skip setting the version to avoid
+    // an undefined-symbol compile/link dependency.
+    // If desired, define NVER_STRING in the build environment.
+#endif
 #ifdef Q_OS_MAC
     setAttribute(Qt::AA_DontShowIconsInMenus);
 #endif

@@ -15,6 +15,7 @@
 
 class ItemInfo;
 class QTabWidget;
+class EnhancedPropertyAdditionEngine;
 
 class PropertyEditor : public QWidget
 {
@@ -42,6 +43,9 @@ private slots:
     void onValueChanged();
     void onParameterChanged();
     void validateProperty();
+
+private:
+    void addPropertyToItem(int propertyId, int value, quint32 parameter);
 
 private:
     struct PropertyEditorRow {
@@ -96,6 +100,9 @@ private:
     QPushButton *_revertButton;
     QLabel *_statusLabel;
     QCheckBox *_showAllPropertiesCheck;
+    
+    // Enhanced Property Addition Engine
+    EnhancedPropertyAdditionEngine *_enhancedEngine;
     
     bool _hasChanges;
     bool _updatingUI;

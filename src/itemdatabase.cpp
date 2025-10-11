@@ -671,8 +671,36 @@ ItemInfo *ItemDataBase::loadItemFromFile(const QString &fileName)
     ItemInfo *item = 0;
     QString filePath = ResourcePathManager::pathForResourceItem(fileName);
     QFile itemFile(filePath);
-    if (itemFile.open(QIODevice::ReadOnly))
+    if (!itemFile.open(QIODevice::ReadOnly))
     {
+        // Try several fallback locations under the configured resourcesPath
+        QStringList candidates;
+        const QString resPath = LanguageManager::instance().resourcesPath;
+        candidates << QString("%1/items/%2.d2i").arg(resPath).arg(fileName);
+        candidates << QString("%1/data/Items/items/%2.d2i").arg(resPath).arg(fileName);
+        candidates << QString("%1/Items/items/%2.d2i").arg(resPath).arg(fileName);
+
+        bool loaded = false;
+        foreach (const QString &p, candidates) {
+            QFile fallbackFile(p);
+            if (fallbackFile.open(QIODevice::ReadOnly)) {
+                QByteArray itemBytes = fallbackFile.readAll();
+                fallbackFile.close();
+
+                QDataStream ds(itemBytes);
+                ds.setByteOrder(QDataStream::LittleEndian);
+
+                item = ItemParser::parseItem(ds, itemBytes);
+                item->hasChanged = true;
+                item->row = item->column = -1;
+                loaded = true;
+                break;
+            }
+        }
+        if (!loaded)
+            ERROR_BOX_NO_PARENT(tr("Error loading '%1'").arg(filePath) + "\n" + tr("Reason: %1", "error with file").arg(itemFile.errorString()));
+    }
+    else {
         QByteArray itemBytes = itemFile.readAll();
         itemFile.close();
 
@@ -683,8 +711,6 @@ ItemInfo *ItemDataBase::loadItemFromFile(const QString &fileName)
         item->hasChanged = true;
         item->row = item->column = -1;
     }
-    else
-        ERROR_BOX_NO_PARENT(tr("Error loading '%1'").arg(filePath) + "\n" + tr("Reason: %1", "error with file").arg(itemFile.errorString()));
     return item;
 }
 

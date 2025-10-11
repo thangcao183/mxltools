@@ -1,0 +1,106 @@
+# Cấu trúc File Save (.d2s) trong Median XL Offline Tools
+
+Tài liệu này phân tích chi tiết cấu trúc file save `.d2s` của Diablo II như được diễn giải và xử lý bởi công cụ `MedianXLOfflineTools`. Việc hiểu rõ cấu trúc này là cực kỳ quan trọng để có thể đọc và chỉnh sửa thông tin nhân vật một cách chính xác.
+
+## Tổng quan
+
+File `.d2s` là một file nhị phân, không được đọc một cách tuần tự hoàn toàn. Thay vào đó, nó được chia thành các phần:
+1.  **Header & Thông tin cơ bản:** Nằm ở các vị trí (offset) cố định từ đầu file.
+2.  **Các khối dữ liệu động:** Được xác định bởi các "header" (chuỗi ký tự định danh) đặc trưng. Chương trình sẽ tìm các header này để xác định vị trí bắt đầu của từng khối dữ liệu.
+
+---
+
+## Phần 1: Header và Thông tin cơ bản (Vị trí cố định)
+
+| Offset (Hex) | Kích thước (Bytes) | Mô tả                                                                                                                            | Tên Enum (trong `enums.h`) |
+| :----------- | :----------------- | :------------------------------------------------------------------------------------------------------------------------------- | :------------------------- |
+| `0x00`       | 4                  | Magic Word, luôn là `0xAA55AA55`. Dùng để xác nhận đây là file save của Diablo II.                                                 | -                          |
+| `0x08`       | 4                  | Kích thước file (File Size).                                                                                                    | `Offsets::FileSize`        |
+| `0x0C`       | 4                  | **Checksum** của toàn bộ file. Xem chi tiết ở phần Checksum.                                                                     | `Offsets::Checksum`        |
+| `0x14`       | 16                 | Tên nhân vật (Name), dạng chuỗi ký tự C-style (kết thúc bằng `0x00`).                                                            | `Offsets::Name`            |
+| `0x24`       | 1                  | Trạng thái nhân vật (Status), là một bitmask.                                                                                    | `Offsets::Status`          |
+| `0x25`       | 1                  | Tiến trình (Progression), cho biết độ khó cao nhất đã hoàn thành.                                                                | `Offsets::Progression`     |
+| `0x28`       | 1                  | Lớp nhân vật (Class), ví dụ: 0 = Amazon, 1 = Sorceress,...                                                                       | `Offsets::Class`           |
+| `0x2A`       | 2                  | Số lượng skill (SkillsCount).                                                                                                    | `Offsets::SkillsCount`     |
+| `0x2B`       | 1                  | Cấp độ nhân vật (Level).                                                                                                         | `Offsets::Level`           |
+| `0xB3`       | 2                  | Thông tin về đệ tử (Mercenary).                                                                                                  | `Offsets::Mercenary`       |
+
+### Chi tiết Bitmask Trạng thái (`0x24`)
+
+Giá trị tại offset này được đọc dưới dạng bit.
+
+| Bit      | Mô tả                               | Tên Enum (trong `enums.h`) |
+| :------- | :---------------------------------- | :------------------------- |
+| `bit 2`  | `0x04`: Nhân vật là Hardcore.       | `StatusBits::IsHardcore`   |
+| `bit 3`  | `0x08`: Nhân vật đã từng chết.      | `StatusBits::HadDied`      |
+| `bit 5`  | `0x20`: Nhân vật thuộc bản mở rộng. | `StatusBits::IsExpansion`  |
+| `bit 6`  | `0x40`: Nhân vật thuộc Ladder.      | `StatusBits::IsLadder`     |
+
+---
+
+## Phần 2: Các khối dữ liệu động (Xác định bằng Header)
+
+Chương trình tìm các chuỗi header này để định vị và xử lý các khối dữ liệu quan trọng.
+
+### 1. Quests (Nhiệm vụ)
+
+*   **Header:** `"Woo!"` (`0x57 0x6F 0x6F 0x21`)
+*   **Vị trí:** Bắt đầu từ offset `0x14F` (`Offsets::QuestsHeader`).
+*   **Nội dung:** Chứa trạng thái hoàn thành của các nhiệm vụ trong game.
+
+### 2. Waypoints (Điểm dịch chuyển)
+
+*   **Header:** `"WS"` (`0x57 0x53`)
+*   **Vị trí:** Bắt đầu từ offset `0x279` (`Offsets::WaypointsHeader`).
+*   **Nội dung:** Chứa thông tin về các điểm dịch chuyển (waypoints) đã được kích hoạt ở các độ khó khác nhau.
+
+### 3. Stats (Chỉ số nhân vật) - **KHỐI QUAN TRỌNG NHẤT**
+
+Đây là phần phức tạp nhất và là chìa khóa để đọc đúng các chỉ số như Strength, Dexterity, v.v.
+
+*   **Header:** `"gf"` (`0x67 0x66`)
+*   **Vị trí:** Bắt đầu từ offset `0x2FD` (`Offsets::StatsHeader`).
+*   **Logic đọc:**
+    1.  **Trích xuất Dữ liệu Thô:** Toàn bộ khối dữ liệu từ ngay sau header `"gf"` cho đến trước header tiếp theo (`"if"`) được đọc vào một buffer.
+    2.  **Tạo Chuỗi Bit Ngược:** Khối dữ liệu này được chuyển thành một chuỗi bit nhị phân (ví dụ: `"01101...1001"`) theo một cách đặc biệt: từng byte được chuyển thành 8 bit và **nối vào phía trước (prepend)** của chuỗi kết quả.
+        *   *Ví dụ:* Nếu 2 byte đầu là `0xAB` (`10101011`) và `0xCD` (`11001101`), chuỗi bit sẽ là `"1100110110101011"`, không phải `"1010101111001101"`.
+    3.  **Sử dụng `ReverseBitReader`:** Một đối tượng `ReverseBitReader` được khởi tạo với chuỗi bit ngược này. Class này đọc chuỗi bit từ **phải sang trái** (từ cuối về đầu).
+    4.  **Vòng lặp đọc Stats:**
+        *   Đọc **9 bit** để lấy `statID` (ID của chỉ số, định nghĩa trong `Enums::CharacterStats`).
+        *   Nếu `statID == 511` (chuỗi `111111111`), đây là dấu hiệu kết thúc khối stats, vòng lặp dừng lại.
+        *   Dựa vào `statID`, chương trình tra cứu trong database (từ các file txt của game) để biết giá trị của stat này dài bao nhiêu bit.
+        *   Đọc tiếp số bit tương ứng để lấy `statValue`.
+        *   Lưu cặp `(statID, statValue)` vào một `QMultiMap`.
+    5.  **Sử dụng `QMultiMap`:** Cấu trúc dữ liệu này cho phép lưu trữ **nhiều giá trị cho cùng một khóa**. Điều này có nghĩa là một chỉ số (ví dụ: Vitality) có thể xuất hiện nhiều lần trong dữ liệu. Giá trị chính xác mà game sử dụng thường là giá trị **đầu tiên đọc được từ cuối chuỗi bit**.
+
+### 4. Skills (Kỹ năng)
+
+*   **Header:** `"if"` (`0x69 0x66`)
+*   **Vị trí:** Nằm ngay sau khối Stats.
+*   **Nội dung:** Chứa 30 bytes, mỗi byte tương ứng với một skill trong thứ tự nội bộ của game. Giá trị của byte là số điểm đã cộng vào skill đó.
+
+### 5. Items (Vật phẩm)
+
+*   **Header:** `"JM"` (`0x4A 0x4D`)
+*   **Vị trí:** Nằm ngay sau khối Skills.
+*   **Nội dung:**
+    *   Khối này bắt đầu bằng một header `"JM"`.
+    *   Ngay sau đó là số lượng vật phẩm.
+    *   Mỗi vật phẩm riêng lẻ trong hòm đồ, trên người, v.v. cũng bắt đầu bằng một header `"JM"` của riêng nó.
+    *   Cấu trúc của từng vật phẩm rất phức tạp, bao gồm nhiều bitfield cho các thuộc tính như đã nhận dạng, có lỗ, ethereal, vị trí, các thuộc tính cộng thêm, v.v. Việc phân tích khối này được thực hiện bởi `ItemParser`.
+
+---
+
+## Phần 3: Checksum
+
+Checksum được dùng để xác minh tính toàn vẹn của file save. Nếu file bị chỉnh sửa không đúng cách, checksum sẽ sai và game sẽ từ chối load file.
+
+*   **Vị trí:** 4 bytes tại offset `0x0C`.
+*   **Thuật toán tính toán:**
+    1.  Lấy toàn bộ nội dung file save.
+    2.  Tạm thời ghi 4 byte ở địa chỉ `0x0C` (vị trí của checksum cũ) thành `0x00 0x00 0x00 0x00`.
+    3.  Khởi tạo một biến `checksum` 32-bit bằng 0.
+    4.  Lặp qua từng `byte` của file:
+        *   `checksum = (checksum << 1) + byte`
+        *   Nếu phép dịch trái `<< 1` gây ra tràn số (bit cao nhất của `checksum` trước đó là 1), thì cộng thêm 1 vào `checksum` sau khi dịch bit.
+    5.  Giá trị `checksum` cuối cùng sau khi lặp qua toàn bộ file chính là checksum mới. Giá trị này được ghi lại vào 4 byte tại offset `0x0C`.

@@ -13,6 +13,11 @@
         "functional": "cpp",
         "tuple": "cpp",
         "type_traits": "cpp",
-        "utility": "cpp"
+        "utility": "cpp",
+        "*.moc": "cpp",
+        "string": "cpp",
+        "string_view": "cpp",
+        "span": "cpp",
+        "source_location": "cpp"
     }
 }

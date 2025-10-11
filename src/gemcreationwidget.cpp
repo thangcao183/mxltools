@@ -494,15 +494,13 @@ ItemInfo* GemCreationWidget::createBasicGem(const QString &gemCode)
         additionalData[1] = 0x01; // Level = 1
         bitStringBytes.append(additionalData);
         
-        // Convert bytes to bit string (each byte becomes 8 bits)
+        // Convert bytes to bit string (each byte becomes 8 bits) using helper
         QString bitString;
-        for (int i = 0; i < bitStringBytes.length(); i++) {
+        for (int i = 0; i < bitStringBytes.length(); ++i) {
             quint8 byte = static_cast<quint8>(bitStringBytes.at(i));
-            for (int bit = 7; bit >= 0; bit--) {
-                bitString.append((byte & (1 << bit)) ? '1' : '0');
-            }
+            bitString.append(binaryStringFromNumber(byte, false, 8));
         }
-        
+
         gem->bitString = bitString;
         
         qDebug() << "Created basic gem from scratch:" << gemCode;

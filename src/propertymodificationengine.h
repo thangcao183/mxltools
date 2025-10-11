@@ -25,6 +25,9 @@ public:
     bool validateProperty(int propertyId, int value, quint32 parameter, QString *error = nullptr);
     bool validatePropertyCombination(const PropertiesMultiMap &properties, QString *error = nullptr);
     
+    // Error handling
+    QString lastError() const { return _lastError; }
+    
     // Utility functions
     QList<int> getDependentProperties(int propertyId) const;
     bool isSpecialProperty(int propertyId) const;
@@ -60,6 +63,18 @@ private:
     // Item structure parsing utilities - reuse ItemParser logic
     int calculatePropertiesStartPosition(ItemInfo *item);
     void skipItemBasicData(class ReverseBitReader &bitReader, ItemInfo *item);
+    // In-place property insertion helper (safe, verifies via round-trip)
+    bool insertPropertyInPlace(ItemInfo *item, int propertyId, const ItemProperty *property);
+    
+    // Options B and C: Advanced reconstruction methods
+    bool tryChunkAwareInsertion(ItemInfo *item, const QString &beforeProperties, const QString &propertiesBits, const QString &afterProperties);
+    bool tryCompleteItemRecreation(ItemInfo *item);
+    
+    // Option E: Smart bit-level reconstruction with corruption prevention
+    bool trySmartBitReconstruction(ItemInfo *item, const QString &beforeProperties, const QString &propertiesBits, const QString &afterProperties);
+    
+    // Option F: Property replacement (modify existing property instead of adding new one)
+    bool tryPropertyReplacement(ItemInfo *item, int newPropertyId, int newValue);
     
     // Property ordering and dependencies
     QList<QPair<int, ItemProperty*>> getOrderedProperties(const PropertiesMultiMap &properties);

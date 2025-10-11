@@ -61,6 +61,12 @@ target_sources(MedianXLOfflineTools PRIVATE
 	propertyeditor.h
 	propertymodificationengine.cpp
 	propertymodificationengine.h
+	propertymodificationserializer.cpp
+	propertymodificationserializer.h
+	enhancedpropertyadditionengine.cpp
+	enhancedpropertyadditionengine.h
+	addpropertydialog.cpp
+	addpropertydialog.h
 	qd2charrenamer.cpp
 	qd2charrenamer.h
 	qd2charrenamer.ui
@@ -87,6 +93,31 @@ target_sources(MedianXLOfflineTools PRIVATE
 	stashsortingoptionsdialog.ui
 	structs.h
 )
+
+# (Removed experimental CLI/research targets — retained GUI and core libraries)
+
+# Research d2i file structure and property mechanics
+add_executable(research_d2i_structure
+	research_d2i_structure.cpp
+)
+target_link_libraries(research_d2i_structure PRIVATE
+	Qt${QT_VERSION_MAJOR}::Core
+	Qt${QT_VERSION_MAJOR}::Widgets
+)
+target_include_directories(research_d2i_structure PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_sources(research_d2i_structure PRIVATE
+	helpers.cpp
+	itemdatabase.cpp
+	itemparser.cpp
+	reversebitreader.cpp
+	reversebitwriter.cpp
+	colorsmanager.cpp
+	enums.cpp
+	itemsviewerdialog_stubs.cpp
+)
+
+# Test property addition with new LengthAwareSerializer
+# Experimental CLI/research targets removed (kept core GUI and enhanced engine)
 
 if(WIN32)
 	target_sources(MedianXLOfflineTools PRIVATE

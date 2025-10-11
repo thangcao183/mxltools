@@ -34,15 +34,16 @@ QString &ReverseBitWriter::insert(QString &bitString, int offsetWithoutJM, const
 
 QString &ReverseBitWriter::byteAlignBits(QString &bitString)
 {
+    // Safer byte alignment: append zeros at the END of the bit string to make
+    // its length a multiple of 8. The previous implementation could remove or
+    // prepend bits which corrupts item headers. Appending zeros preserves all
+    // existing bits and is compatible with how ItemParser converts bits->bytes.
     const int kBitsInByte = 8;
     int extraBits = bitString.length() % kBitsInByte;
     if (extraBits)
     {
-        int zerosBeforeFirst1 = bitString.indexOf('1'), zerosToAppend = kBitsInByte - extraBits;
-        if (zerosBeforeFirst1 + zerosToAppend < kBitsInByte)
-            bitString.prepend(QString(zerosToAppend, kZeroChar));
-        else
-            bitString.remove(0, extraBits);
+        int zerosToAppend = kBitsInByte - extraBits;
+        bitString.append(QString(zerosToAppend, '0'));
     }
     return bitString;
 }

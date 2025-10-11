@@ -1,11 +1,15 @@
 #include "propertyeditor.h"
+#include "addpropertydialog.h"
 #include "propertymodificationengine.h"
+#include "enhancedpropertyadditionengine.h"
 #include "itemparser.h"
 #include "itemdatabase.h"
 #include "reversebitwriter.h"
 #include "enums.h"
 #include "helpers.h"
+#include "characterinfo.hpp"
 
+#include <algorithm>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGridLayout>
@@ -26,7 +30,26 @@ PropertyEditor::PropertyEditor(QWidget *parent)
     , _item(nullptr)
     , _hasChanges(false)
     , _updatingUI(false)
+    , _enhancedEngine(nullptr)
 {
+    // Initialize Enhanced Property Addition Engine
+    _enhancedEngine = new EnhancedPropertyAdditionEngine(this);
+    connect(_enhancedEngine, &EnhancedPropertyAdditionEngine::statusChanged,
+            this, [this](const QString &status) {
+                if (_statusLabel) {
+                    _statusLabel->setText(status);
+                }
+            });
+    connect(_enhancedEngine, &EnhancedPropertyAdditionEngine::errorOccurred,
+            this, [this](const QString &error) {
+                QMessageBox::warning(this, tr("Property Addition Error"), error);
+            });
+    connect(_enhancedEngine, &EnhancedPropertyAdditionEngine::propertyAdded,
+            this, [this](int propertyId, const QString &propertyName, int value) {
+                QMessageBox::information(this, tr("Property Added"), 
+                    tr("Successfully added %1: %2").arg(propertyName).arg(value));
+            });
+    
     setupUI();
 }
 
@@ -115,8 +138,8 @@ void PropertyEditor::setItem(ItemInfo *item)
         return;
     }
     
-    // Disable add button - only allow modifying existing properties for safety
-    _addButton->setEnabled(false);
+    // Enable add button for adding new properties
+    _addButton->setEnabled(true);
     backupOriginalProperties();
     
     // Populate existing properties
@@ -285,8 +308,37 @@ void PropertyEditor::populatePropertyCombo(QComboBox *combo)
 
 void PropertyEditor::addProperty()
 {
-    // Add empty property row
-    addPropertyRow();
+    if (!_item) {
+        QMessageBox::warning(this, tr("Add Property"), 
+                           tr("No item selected."));
+        return;
+    }
+    
+    // Show enhanced dialog to select property to add
+    AddPropertyDialog dialog(this);
+    
+    // Connect Enhanced Property Engine for better validation and info
+    if (_enhancedEngine) {
+        dialog.setPropertyEngine(_enhancedEngine);
+    }
+    
+    if (dialog.exec() == QDialog::Accepted) {
+        int propertyId = dialog.getSelectedPropertyId();
+        int value = dialog.getDefaultValue();
+        quint32 parameter = dialog.getDefaultParameter();
+        
+        if (propertyId >= 0) {
+            // Check if property already exists
+            if (_item->props.contains(propertyId)) {
+                QMessageBox::information(this, tr("Add Property"),
+                                        tr("Property already exists. You can modify its value instead."));
+                return;
+            }
+            
+            // Add property using PropertyModificationEngine
+            addPropertyToItem(propertyId, value, parameter);
+        }
+    }
 }
 
 void PropertyEditor::addPropertyRow(int propertyId, int value, quint32 parameter, bool isNew, bool isRunewordProperty)
@@ -341,10 +393,10 @@ void PropertyEditor::addPropertyRow(int propertyId, int value, quint32 parameter
     // Parameter label and spin box
     row->parameterLabel = new QLabel(tr("Param:"));
     row->parameterSpinBox = new QSpinBox;
-    row->parameterSpinBox->setRange(0, 65535);
+    row->parameterSpinBox->setRange(0, 2147483647); // Maximum signed 32-bit int
     row->parameterSpinBox->setValue(parameter);
     row->parameterSpinBox->setMinimumWidth(80);
-    row->parameterSpinBox->setToolTip(tr("Property parameter. Range limited to prevent overflow based on property definition."));
+    row->parameterSpinBox->setToolTip(tr("Property parameter. Range unrestricted - overflow protection bypassed."));
     
     connect(row->parameterSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
             [this]() { 
@@ -474,13 +526,12 @@ void PropertyEditor::updatePropertyRow(PropertyEditorRow *row)
                           .arg(valueRange.first).arg(valueRange.second);
     row->valueSpinBox->setToolTip(valueTooltip);
     
-    // Update parameter range
+    // Update parameter range - range limits bypassed per user request
     if (hasParam) {
-        QPair<quint32, quint32> paramRange = getParameterRange(propertyId);
-        row->parameterSpinBox->setRange(paramRange.first, paramRange.second);
+        // Allow full parameter range (0 to maximum signed 32-bit)
+        row->parameterSpinBox->setRange(0, 2147483647); // Maximum signed 32-bit int
         
-        QString paramTooltip = tr("Parameter range: %1 to %2\nUsed for skill IDs, class restrictions, etc.")
-                              .arg(paramRange.first).arg(paramRange.second);
+        QString paramTooltip = tr("Parameter range: unrestricted (0 to 2147483647)\nOverflow protection bypassed - use with caution!");
         row->parameterSpinBox->setToolTip(paramTooltip);
     }
     
@@ -562,11 +613,14 @@ void PropertyEditor::validatePropertyValue(PropertyEditorRow *row)
         return;
     }
     
+    // Parameter overflow check bypassed per user request
+    /*
     if (!validateParameterOverflow(propertyId, parameter)) {
         row->warningLabel->setText(tr("Parameter overflow risk!"));
         row->warningLabel->show();
         return;
     }
+    */
     
     // Get correct value range using the same logic as PropertyModificationEngine
     QPair<int, int> range = getValueRange(propertyId);
@@ -973,7 +1027,9 @@ void PropertyEditor::applyChanges()
         _statusLabel->setText(tr("Changes applied successfully!"));
         _statusLabel->setStyleSheet("QLabel { color: green; font-weight: bold; }");
         
-        emit itemChanged();
+    qDebug() << "PropertyEditor: emitting itemChanged for item" << (_item ? _item->itemType : QString("<null>"));
+    qDebug() << "PropertyEditor: emitting itemChanged (revert) for item" << (_item ? _item->itemType : QString("<null>"));
+    emit itemChanged();
         
     } catch (const std::exception &e) {
         QMessageBox::critical(this, tr("Error"), 
@@ -1007,10 +1063,13 @@ void PropertyEditor::applyPropertyChanges()
                                .arg(propertyId).arg(value);
         }
         
+        // Parameter overflow check bypassed per user request
+        /*
         if (!validateParameterOverflow(propertyId, parameter)) {
             validationErrors << tr("Property %1: Parameter %2 exceeds safe range")
                                .arg(propertyId).arg(parameter);
         }
+        */
     }
     
     if (!validationErrors.isEmpty()) {
@@ -1098,6 +1157,8 @@ void PropertyEditor::applyPropertyChanges()
     
     qDebug() << "PropertyEditor: Marking changes and updating UI...";
     
+    // Note: Save file offsets will be recalculated during save process
+    
     // Mark item as changed and reset UI state
     _hasChanges = false;  // Reset since we just applied changes
     updateButtonStates();
@@ -1143,6 +1204,41 @@ void PropertyEditor::revertChanges()
     emit itemChanged();
 }
 
+void PropertyEditor::addPropertyToItem(int propertyId, int value, quint32 parameter)
+{
+    if (!_item || !_enhancedEngine) return;
+    
+    // Set status
+    if (_statusLabel) {
+        _statusLabel->setText(tr("Adding property..."));
+    }
+    
+    // Use Enhanced Property Addition Engine with LSB-first algorithm
+    if (_enhancedEngine->addPropertyToItem(_item, propertyId, value, parameter)) {
+        // Success! Update UI
+        _hasChanges = true;
+        backupOriginalProperties();
+    qDebug() << "PropertyEditor: emitting itemChanged (addProperty) for item" << (_item ? _item->itemType : QString("<null>"));
+    emit itemChanged();
+        
+        // Refresh property display by re-setting the item
+        if (!_updatingUI) {
+            ItemInfo* currentItem = _item;
+            _item = nullptr; // Reset to force refresh
+            setItem(currentItem);
+        }
+        
+        if (_statusLabel) {
+            _statusLabel->setText(tr("Property added successfully"));
+        }
+    } else {
+        // Error handling is done via Enhanced Engine's error signals
+        if (_statusLabel) {
+            _statusLabel->setText(tr("Failed to add property"));
+        }
+    }
+}
+
 void PropertyEditor::removeProperty()
 {
     QPushButton *removeButton = qobject_cast<QPushButton*>(sender());
@@ -1157,3 +1253,4 @@ void PropertyEditor::removeProperty()
         }
     }
 }
+

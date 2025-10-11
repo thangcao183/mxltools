@@ -69,6 +69,10 @@ protected slots:
 
     void showContextMenu(const QPoint &pos);
     void editItemProperties();
+    void editD2iFile();
+    void exportItemAsD2i();
+    void importItemFromD2i();
+    void importItemFromD2iAt();
     virtual bool moveBetweenStashes();
     void exportText();
     void copyAllItemsBBCode(QAction *action);
@@ -85,6 +89,7 @@ protected slots:
     void createRuneAt();
     void createGemAt();
     void createArcaneCrystalAt();
+    void createShrineAt();
 #ifdef DUMP_INFO_ACTION
     void dumpInfo(ItemInfo *item = 0, bool shouldShowMsgBox = true);
 #endif // DUMP_INFO_ACTION

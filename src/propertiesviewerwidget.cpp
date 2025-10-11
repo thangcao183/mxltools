@@ -13,9 +13,7 @@
 #include <QSettings>
 #include <QPushButton>
 
-#ifndef QT_NO_DEBUG
 #include <QDebug>
-#endif
 
 
 static const QString kBaseFormat("<html><body bgcolor=\"black\" align=\"center\" style=\"color: white\">%1</body></html>");
@@ -499,7 +497,7 @@ void PropertiesViewerWidget::removeMysticOrbData(int moCode, PropertiesMultiMap 
     ItemPropertyTxt *propertyTxt = ItemDataBase::Properties()->value(moCode);
     int valueIndex = indexOfPropertyValue(moCode, props);
     if (valueIndex > -1)
-        _item->bitString.remove(valueIndex, propertyTxt->bits + propertyTxt->paramBits + Enums::CharacterStats::StatCodeLength);
+        ReverseBitWriter::remove(_item->bitString, valueIndex, propertyTxt->bits + propertyTxt->paramBits + Enums::CharacterStats::StatCodeLength);
 
     delete props->take(moCode);
 }
@@ -576,11 +574,11 @@ void PropertiesViewerWidget::modifyMysticOrbProperty(int id, int decrement, Prop
             newBits += newBits;
             prop->displayString = ItemParser::kEnhancedDamageFormat().arg(prop->value);
         }
-        _item->bitString.replace(valueIndex, bitsLength, newBits); // place modified value
+    ReverseBitWriter::replaceValueInBitString(_item->bitString, valueIndex, newBits.toULongLong(0, 2), bitsLength);
     }
     else
     {
-        _item->bitString.remove(valueIndex, bitsLength + propertyTxt->paramBits + Enums::CharacterStats::StatCodeLength);
+    ReverseBitWriter::remove(_item->bitString, valueIndex, bitsLength + propertyTxt->paramBits + Enums::CharacterStats::StatCodeLength);
         props->remove(id, prop);
         delete prop;
     }
@@ -740,6 +738,7 @@ void PropertiesViewerWidget::openPropertyEditor()
         // Connect signals
         connect(_propertyEditor, &PropertyEditor::itemChanged, 
                 [this]() { 
+                    qDebug() << "PropertiesViewerWidget: received itemChanged from PropertyEditor, forwarding itemsChanged(true) for item" << (_item ? _item->itemType : QString("<null>"));
                     emit itemsChanged(); // Legacy signal
                     emit itemsChanged(true); // Signal for MainWindow
                     showItem(_item); 
