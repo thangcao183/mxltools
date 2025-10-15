@@ -105,6 +105,11 @@ private:
     EnhancedPropertyAdditionEngine *_enhancedEngine;
     
     bool _hasChanges;
+    
+         // Basic stats UI
+         QGroupBox *_basicStatsGroup;
+         QSpinBox *_requiredLevelSpin;
+         QSpinBox *_maxDurabilitySpin;
     bool _updatingUI;
 };
 
