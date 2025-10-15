@@ -15,6 +15,8 @@
 #include "runecreationwidget.h"
 #include "gemcreationwidget.h"
 #include "arcanecrystalcreationwidget.h"
+#include "oilcreationwidget.h"
+#include "mysticorbcreationwidget.h"
 
 #include <QMenu>
 #include <QInputDialog>
@@ -397,6 +399,13 @@ void ItemsPropertiesSplitter::showContextMenu(const QPoint &pos)
             connect(createGemAction, SIGNAL(triggered()), this, SLOT(createGemAt()));
             actions << createGemAction;
         }
+
+        QAction *createOilAction = new QAction(QString("Create Oil..."), this);
+        if (createOilAction) {
+            createOilAction->setData(QPoint(clickedIndex.row(), clickedIndex.column()));
+            connect(createOilAction, SIGNAL(triggered()), this, SLOT(createOilAt()));
+            actions << createOilAction;
+        }
         
         QAction *createCrystalAction = new QAction(QString("Create Arcane Crystal..."), this);
         if (createCrystalAction) {
@@ -410,6 +419,13 @@ void ItemsPropertiesSplitter::showContextMenu(const QPoint &pos)
             createShrineAction->setData(QPoint(clickedIndex.row(), clickedIndex.column()));
             connect(createShrineAction, SIGNAL(triggered()), this, SLOT(createShrineAt()));
             actions << createShrineAction;
+        }
+
+        QAction *createMysticOrbAction = new QAction(QString("Create Mystic Orb..."), this);
+        if (createMysticOrbAction) {
+            createMysticOrbAction->setData(QPoint(clickedIndex.row(), clickedIndex.column()));
+            connect(createMysticOrbAction, SIGNAL(triggered()), this, SLOT(createMysticOrbAt()));
+            actions << createMysticOrbAction;
         }
         
         // Add Import .d2i action for empty cell (place imported item at clicked coordinates)
@@ -1206,141 +1222,181 @@ void ItemsPropertiesSplitter::personalize()
 void ItemsPropertiesSplitter::createRuneAt()
 {
     QAction *action = qobject_cast<QAction *>(sender());
-    if (!action) {
-        return;
-    }
-    
+    if (!action) return;
+
     QPoint position = action->data().toPoint();
-    if (position.x() < 0 || position.y() < 0) {
-        return;
-    }
-    
+    if (position.x() < 0 || position.y() < 0) return;
+
     try {
         RuneCreationWidget *dialog = new RuneCreationWidget(this);
         if (!dialog) return;
-        
+
         dialog->setItemPosition(position.x(), position.y());
-        
+
         if (dialog->exec() == QDialog::Accepted)
         {
-            ItemInfo *newRune = dialog->getCreatedRune();
-            if (newRune)
-            {
-                qDebug() << "Using cube upgrade method to store rune:" << newRune->itemType;
+            int copies = dialog->copies();
+            int successCount = 0;
 
-                // Determine target storage: use selected item's storage; if none selected, use active ItemsViewerDialog tab
-                ItemInfo *sel = selectedItem(false);
-                int storage = -1;
-                if (sel)
-                    storage = sel->storage;
-                else
+            // Determine target storage: use selected item's storage; if none selected, use active ItemsViewerDialog tab
+            ItemInfo *sel = selectedItem(false);
+            int storage = -1;
+            if (sel)
+                storage = sel->storage;
+            else
+            {
+                ItemsViewerDialog *viewer = nullptr;
+                QWidget *p = parentWidget();
+                while (p) { viewer = qobject_cast<ItemsViewerDialog *>(p); if (viewer) break; p = p->parentWidget(); }
+                if (viewer)
                 {
-                    ItemsViewerDialog *viewer = nullptr;
-                    QWidget *p = parentWidget();
-                    while (p) { viewer = qobject_cast<ItemsViewerDialog *>(p); if (viewer) break; p = p->parentWidget(); }
-                    if (viewer)
-                    {
-                        int tab = viewer->tabWidget()->currentIndex();
-                        if (tab <= ItemsViewerDialog::InventoryIndex)
-                            storage = tab;
-                        else if (tab == ItemsViewerDialog::CubeIndex)
-                            storage = tab + 2; // inverse of tabIndexFromItemStorage
-                        else
-                            storage = tab + 3;
-                    }
+                    int tab = viewer->tabWidget()->currentIndex();
+                    if (tab <= ItemsViewerDialog::InventoryIndex)
+                        storage = tab;
+                    else if (tab == ItemsViewerDialog::CubeIndex)
+                        storage = tab + 2; // inverse of tabIndexFromItemStorage
                     else
-                        storage = Enums::ItemStorage::Inventory;
+                        storage = tab + 3;
+                }
+                else
+                    storage = Enums::ItemStorage::Inventory;
+            }
+
+            PlugyItemsSplitter *plugy = dynamic_cast<PlugyItemsSplitter *>(this);
+            int rows = ItemsViewerDialog::rowsInStorageAtIndex(storage);
+            int cols = ItemsViewerDialog::colsInStorageAtIndex(storage);
+
+            ItemsList placementItems;
+            if (plugy) {
+                quint32 page = plugy->currentPage();
+                placementItems = ItemDataBase::itemsStoredIn(storage, Enums::ItemLocation::Stored, &page);
+            } else {
+                placementItems = ItemDataBase::itemsStoredIn(storage, Enums::ItemLocation::Stored);
+            }
+
+            // Row-major fill across the storage/page
+            for (int r = 0; r < rows && successCount < copies; ++r) {
+                for (int c = 0; c < cols && successCount < copies; ++c) {
+                    if (ItemDataBase::canStoreItemAt(r, c, dialog->getCreatedRune()->itemType, placementItems, rows, cols)) {
+                        ItemInfo *newRune = new ItemInfo(*dialog->getCreatedRune());
+                        newRune->row = r; newRune->column = c; newRune->storage = storage;
+                        newRune->move(r, c, plugy ? plugy->currentPage() : newRune->plugyPage, true);
+                        newRune->location = Enums::ItemLocation::Stored;
+                        ReverseBitWriter::replaceValueInBitString(newRune->bitString, Enums::ItemOffsets::Storage, isInExternalStorage(newRune) ? Enums::ItemStorage::Stash : newRune->storage);
+                        ReverseBitWriter::replaceValueInBitString(newRune->bitString, Enums::ItemOffsets::Location, newRune->location);
+                        addItemToList(newRune, true);
+                        placementItems.append(newRune);
+                        setCurrentStorageHasChanged();
+                        emit itemsChanged();
+                        ++successCount;
+                    }
+                }
+            }
+
+            // Fallback placement for remaining copies
+            int remaining = copies - successCount;
+            for (int i = 0; i < remaining; ++i) {
+                ItemInfo *newRune = new ItemInfo(*dialog->getCreatedRune());
+                newRune->row = dialog->requestedRow();
+                newRune->column = dialog->requestedColumn();
+                newRune->storage = storage;
+
+                // try exact
+                if (ItemDataBase::canStoreItemAt(newRune->row, newRune->column, newRune->itemType, _allItems, rows, cols)) {
+                    newRune->move(newRune->row, newRune->column, newRune->plugyPage);
+                    newRune->storage = storage;
+                    ReverseBitWriter::replaceValueInBitString(newRune->bitString, Enums::ItemOffsets::Storage, isInExternalStorage(newRune) ? Enums::ItemStorage::Stash : newRune->storage);
+                    ReverseBitWriter::replaceValueInBitString(newRune->bitString, Enums::ItemOffsets::Location, newRune->location);
+                    addItemToList(newRune, true);
+                    setCurrentStorageHasChanged();
+                    emit itemsChanged();
+                    ++successCount;
+                    continue;
                 }
 
-                // Try to place at clicked coordinates or nearest free slot in current storage/page
+                // nearest search
                 bool placed = false;
-                PlugyItemsSplitter *plugy = dynamic_cast<PlugyItemsSplitter *>(this);
-                int rows = ItemsViewerDialog::rowsInStorageAtIndex(storage);
-                int cols = ItemsViewerDialog::colsInStorageAtIndex(storage);
-
-                // helper: search in spiral radius around desired position
-                auto findNearestFree = [&](int desiredRow, int desiredCol, quint32 plugyPage, ItemsList items) -> QPair<int,int>
-                {
-                    int maxRadius = qMax(rows, cols);
-                    for (int r = 0; r <= maxRadius; ++r)
-                    {
-                        for (int dy = -r; dy <= r; ++dy)
-                        {
-                            for (int dx = -r; dx <= r; ++dx)
-                            {
-                                // only check border of square of radius r to avoid duplicates
-                                if (qAbs(dy) != r && qAbs(dx) != r) continue;
-                                int rr = desiredRow + dy;
-                                int cc = desiredCol + dx;
-                                if (rr < 0 || cc < 0 || rr >= rows || cc >= cols) continue;
-                                if (ItemDataBase::canStoreItemAt(rr, cc, newRune->itemType, items, rows, cols))
-                                    return qMakePair(rr, cc);
-                            }
-                        }
-                    }
-                    return qMakePair(-1, -1);
-                };
-
-                if (plugy)
-                {
+                if (plugy) {
                     quint32 page = plugy->currentPage();
                     ItemsList itemsOnPage = ItemDataBase::itemsStoredIn(storage, Enums::ItemLocation::Stored, &page);
-                    QPair<int,int> p = findNearestFree(dialog->getCreatedRune()->row, dialog->getCreatedRune()->column, page, itemsOnPage);
-                    if (p.first >= 0)
-                    {
+                    auto findNearestFree = [&](int desiredRow, int desiredCol, const ItemsList &items) -> QPair<int,int> {
+                        int maxRadius = qMax(rows, cols);
+                        for (int r = 0; r <= maxRadius; ++r) {
+                            for (int dy = -r; dy <= r; ++dy) {
+                                for (int dx = -r; dx <= r; ++dx) {
+                                    if (qAbs(dy) != r && qAbs(dx) != r) continue;
+                                    int rr = desiredRow + dy;
+                                    int cc = desiredCol + dx;
+                                    if (rr < 0 || cc < 0 || rr >= rows || cc >= cols) continue;
+                                    if (ItemDataBase::canStoreItemAt(rr, cc, newRune->itemType, items, rows, cols))
+                                        return qMakePair(rr, cc);
+                                }
+                            }
+                        }
+                        return qMakePair(-1, -1);
+                    };
+
+                    QPair<int,int> p = findNearestFree(dialog->requestedRow(), dialog->requestedColumn(), itemsOnPage);
+                    if (p.first >= 0) {
                         newRune->move(p.first, p.second, page, true);
                         newRune->storage = storage;
                         newRune->location = Enums::ItemLocation::Stored;
                         ReverseBitWriter::replaceValueInBitString(newRune->bitString, Enums::ItemOffsets::Storage, isInExternalStorage(newRune) ? Enums::ItemStorage::Stash : newRune->storage);
                         ReverseBitWriter::replaceValueInBitString(newRune->bitString, Enums::ItemOffsets::Location, newRune->location);
                         addItemToList(newRune, true);
+                        setCurrentStorageHasChanged();
+                        emit itemsChanged();
+                        ++successCount;
                         placed = true;
                     }
-                }
-                else
-                {
-                    // non-plugy storages (inventory, cube, gear)
+                } else {
                     ItemsList items = ItemDataBase::itemsStoredIn(storage, Enums::ItemLocation::Stored);
-                    QPair<int,int> p = findNearestFree(dialog->getCreatedRune()->row, dialog->getCreatedRune()->column, 0, items);
-                    if (p.first >= 0)
-                    {
+                    auto findNearestFree = [&](int desiredRow, int desiredCol, const ItemsList &itemsLocal) -> QPair<int,int> {
+                        int maxRadius = qMax(rows, cols);
+                        for (int r = 0; r <= maxRadius; ++r) {
+                            for (int dy = -r; dy <= r; ++dy) {
+                                for (int dx = -r; dx <= r; ++dx) {
+                                    if (qAbs(dy) != r && qAbs(dx) != r) continue;
+                                    int rr = desiredRow + dy;
+                                    int cc = desiredCol + dx;
+                                    if (rr < 0 || cc < 0 || rr >= rows || cc >= cols) continue;
+                                    if (ItemDataBase::canStoreItemAt(rr, cc, newRune->itemType, itemsLocal, rows, cols))
+                                        return qMakePair(rr, cc);
+                                }
+                            }
+                        }
+                        return qMakePair(-1, -1);
+                    };
+
+                    QPair<int,int> p = findNearestFree(dialog->requestedRow(), dialog->requestedColumn(), items);
+                    if (p.first >= 0) {
                         newRune->move(p.first, p.second, 0, true);
                         newRune->storage = storage;
                         newRune->location = Enums::ItemLocation::Stored;
                         ReverseBitWriter::replaceValueInBitString(newRune->bitString, Enums::ItemOffsets::Storage, isInExternalStorage(newRune) ? Enums::ItemStorage::Stash : newRune->storage);
                         ReverseBitWriter::replaceValueInBitString(newRune->bitString, Enums::ItemOffsets::Location, newRune->location);
                         addItemToList(newRune, true);
+                        setCurrentStorageHasChanged();
+                        emit itemsChanged();
+                        ++successCount;
                         placed = true;
                     }
                 }
 
-                // Fallback: let storeItemInStorage find any free slot (including other pages for plugy)
-                if (!placed)
-                {
-                    if (!storeItemInStorage(newRune, storage, true)) {
-                        QMessageBox::warning(this, tr("Storage Failed"), tr("Failed to store rune in storage %1!").arg(storage));
-                        delete newRune;
-                        dialog->deleteLater();
-                        return;
+                if (!placed) {
+                    if (ItemDataBase::storeItemIn(newRune, static_cast<Enums::ItemStorage::ItemStorageEnum>(storage), rows, cols)) {
+                        addItemToList(newRune, true);
+                        ++successCount;
+                    } else {
+                        addItemToList(newRune, true); // still add to list without coords
                     }
                 }
-
-                // Mark as changed for save
-                setCurrentStorageHasChanged();
-
-                // Emit signal to notify that items have changed
-                emit itemsChanged();
-
-                qDebug() << "Rune added to items. Total items now:" << CharacterInfo::instance().items.character.size();
-
-                // Prompt user to save immediately
-                QMessageBox::information(this, tr("Rune Created"), tr("Rune created successfully at position (%1, %2).\n\n" "Remember to save the character (Ctrl+S) to keep the changes!").arg(newRune->row + 1).arg(newRune->column + 1));
-
-                // Show the item in the properties viewer
-                showItem(newRune);
             }
+
+            if (successCount > 0)
+                QMessageBox::information(this, tr("Rune(s) Created"), tr("Created %1 rune(s). Remember to save the character (Ctrl+S) to keep the changes!").arg(successCount));
         }
-        
+
         dialog->deleteLater();
     } catch (...) {
         // Silently handle exceptions
@@ -1367,120 +1423,351 @@ void ItemsPropertiesSplitter::createGemAt()
         
         if (dialog->exec() == QDialog::Accepted)
         {
-            ItemInfo *newGem = dialog->getCreatedGem();
-            if (newGem)
-            {
-                qDebug() << "Using cube upgrade method to store gem:" << newGem->itemType;
+            int copies = dialog->copies();
+            int successCount = 0;
 
-                // Determine target storage: use selected item's storage; if none selected, use active ItemsViewerDialog tab
-                ItemInfo *sel = selectedItem(false);
-                int storage = -1;
-                if (sel)
-                    storage = sel->storage;
-                else
+            // Determine target storage: use selected item's storage; if none selected, use active ItemsViewerDialog tab
+            ItemInfo *sel = selectedItem(false);
+            int storage = -1;
+            if (sel)
+                storage = sel->storage;
+            else
+            {
+                ItemsViewerDialog *viewer = nullptr;
+                QWidget *p = parentWidget();
+                while (p) { viewer = qobject_cast<ItemsViewerDialog *>(p); if (viewer) break; p = p->parentWidget(); }
+                if (viewer)
                 {
-                    ItemsViewerDialog *viewer = nullptr;
-                    QWidget *p = parentWidget();
-                    while (p) { viewer = qobject_cast<ItemsViewerDialog *>(p); if (viewer) break; p = p->parentWidget(); }
-                    if (viewer)
-                    {
-                        int tab = viewer->tabWidget()->currentIndex();
-                        if (tab <= ItemsViewerDialog::InventoryIndex)
-                            storage = tab;
-                        else if (tab == ItemsViewerDialog::CubeIndex)
-                            storage = tab + 2; // inverse of tabIndexFromItemStorage
-                        else
-                            storage = tab + 3;
-                    }
+                    int tab = viewer->tabWidget()->currentIndex();
+                    if (tab <= ItemsViewerDialog::InventoryIndex)
+                        storage = tab;
+                    else if (tab == ItemsViewerDialog::CubeIndex)
+                        storage = tab + 2; // inverse of tabIndexFromItemStorage
                     else
-                        storage = Enums::ItemStorage::Inventory;
+                        storage = tab + 3;
+                }
+                else
+                    storage = Enums::ItemStorage::Inventory;
+            }
+
+            PlugyItemsSplitter *plugy = dynamic_cast<PlugyItemsSplitter *>(this);
+            int rows = ItemsViewerDialog::rowsInStorageAtIndex(storage);
+            int cols = ItemsViewerDialog::colsInStorageAtIndex(storage);
+
+            ItemsList placementItems;
+            if (plugy) {
+                quint32 page = plugy->currentPage();
+                placementItems = ItemDataBase::itemsStoredIn(storage, Enums::ItemLocation::Stored, &page);
+            } else {
+                placementItems = ItemDataBase::itemsStoredIn(storage, Enums::ItemLocation::Stored);
+            }
+
+            // Row-major fill across the storage/page
+            for (int r = 0; r < rows && successCount < copies; ++r) {
+                for (int c = 0; c < cols && successCount < copies; ++c) {
+                    if (ItemDataBase::canStoreItemAt(r, c, dialog->getCreatedGem()->itemType, placementItems, rows, cols)) {
+                        ItemInfo *newGem = new ItemInfo(*dialog->getCreatedGem());
+                        newGem->row = r; newGem->column = c; newGem->storage = storage;
+                        newGem->move(r, c, plugy ? plugy->currentPage() : newGem->plugyPage, true);
+                        newGem->location = Enums::ItemLocation::Stored;
+                        ReverseBitWriter::replaceValueInBitString(newGem->bitString, Enums::ItemOffsets::Storage, isInExternalStorage(newGem) ? Enums::ItemStorage::Stash : newGem->storage);
+                        ReverseBitWriter::replaceValueInBitString(newGem->bitString, Enums::ItemOffsets::Location, newGem->location);
+                        addItemToList(newGem, true);
+                        placementItems.append(newGem);
+                        setCurrentStorageHasChanged();
+                        emit itemsChanged();
+                        ++successCount;
+                    }
+                }
+            }
+
+            // Fallback placement for remaining copies
+            int remaining = copies - successCount;
+            for (int i = 0; i < remaining; ++i) {
+                ItemInfo *newGem = new ItemInfo(*dialog->getCreatedGem());
+                newGem->row = dialog->requestedRow();
+                newGem->column = dialog->requestedColumn();
+                newGem->storage = storage;
+
+                // try exact
+                if (ItemDataBase::canStoreItemAt(newGem->row, newGem->column, newGem->itemType, _allItems, rows, cols)) {
+                    newGem->move(newGem->row, newGem->column, newGem->plugyPage);
+                    newGem->storage = storage;
+                    ReverseBitWriter::replaceValueInBitString(newGem->bitString, Enums::ItemOffsets::Storage, isInExternalStorage(newGem) ? Enums::ItemStorage::Stash : newGem->storage);
+                    ReverseBitWriter::replaceValueInBitString(newGem->bitString, Enums::ItemOffsets::Location, newGem->location);
+                    addItemToList(newGem, true);
+                    setCurrentStorageHasChanged();
+                    emit itemsChanged();
+                    ++successCount;
+                    continue;
                 }
 
-                // Try to place at clicked coordinates or nearest free slot in current storage/page
+                // nearest search
                 bool placed = false;
-                PlugyItemsSplitter *plugy = dynamic_cast<PlugyItemsSplitter *>(this);
-                int rows = ItemsViewerDialog::rowsInStorageAtIndex(storage);
-                int cols = ItemsViewerDialog::colsInStorageAtIndex(storage);
-
-                auto findNearestFree = [&](int desiredRow, int desiredCol, quint32 plugyPage, ItemsList items) -> QPair<int,int>
-                {
-                    int maxRadius = qMax(rows, cols);
-                    for (int r = 0; r <= maxRadius; ++r)
-                    {
-                        for (int dy = -r; dy <= r; ++dy)
-                        {
-                            for (int dx = -r; dx <= r; ++dx)
-                            {
-                                if (qAbs(dy) != r && qAbs(dx) != r) continue;
-                                int rr = desiredRow + dy;
-                                int cc = desiredCol + dx;
-                                if (rr < 0 || cc < 0 || rr >= rows || cc >= cols) continue;
-                                if (ItemDataBase::canStoreItemAt(rr, cc, newGem->itemType, items, rows, cols))
-                                    return qMakePair(rr, cc);
-                            }
-                        }
-                    }
-                    return qMakePair(-1, -1);
-                };
-
-                if (plugy)
-                {
+                if (plugy) {
                     quint32 page = plugy->currentPage();
                     ItemsList itemsOnPage = ItemDataBase::itemsStoredIn(storage, Enums::ItemLocation::Stored, &page);
-                    QPair<int,int> p = findNearestFree(dialog->getCreatedGem()->row, dialog->getCreatedGem()->column, page, itemsOnPage);
-                    if (p.first >= 0)
-                    {
+                    auto findNearestFree = [&](int desiredRow, int desiredCol, const ItemsList &items) -> QPair<int,int> {
+                        int maxRadius = qMax(rows, cols);
+                        for (int r = 0; r <= maxRadius; ++r) {
+                            for (int dy = -r; dy <= r; ++dy) {
+                                for (int dx = -r; dx <= r; ++dx) {
+                                    if (qAbs(dy) != r && qAbs(dx) != r) continue;
+                                    int rr = desiredRow + dy;
+                                    int cc = desiredCol + dx;
+                                    if (rr < 0 || cc < 0 || rr >= rows || cc >= cols) continue;
+                                    if (ItemDataBase::canStoreItemAt(rr, cc, newGem->itemType, items, rows, cols))
+                                        return qMakePair(rr, cc);
+                                }
+                            }
+                        }
+                        return qMakePair(-1, -1);
+                    };
+
+                    QPair<int,int> p = findNearestFree(dialog->requestedRow(), dialog->requestedColumn(), itemsOnPage);
+                    if (p.first >= 0) {
                         newGem->move(p.first, p.second, page, true);
                         newGem->storage = storage;
                         newGem->location = Enums::ItemLocation::Stored;
                         ReverseBitWriter::replaceValueInBitString(newGem->bitString, Enums::ItemOffsets::Storage, isInExternalStorage(newGem) ? Enums::ItemStorage::Stash : newGem->storage);
                         ReverseBitWriter::replaceValueInBitString(newGem->bitString, Enums::ItemOffsets::Location, newGem->location);
                         addItemToList(newGem, true);
+                        setCurrentStorageHasChanged();
+                        emit itemsChanged();
+                        ++successCount;
                         placed = true;
                     }
-                }
-                else
-                {
+                } else {
                     ItemsList items = ItemDataBase::itemsStoredIn(storage, Enums::ItemLocation::Stored);
-                    QPair<int,int> p = findNearestFree(dialog->getCreatedGem()->row, dialog->getCreatedGem()->column, 0, items);
-                    if (p.first >= 0)
-                    {
+                    auto findNearestFree = [&](int desiredRow, int desiredCol, const ItemsList &itemsLocal) -> QPair<int,int> {
+                        int maxRadius = qMax(rows, cols);
+                        for (int r = 0; r <= maxRadius; ++r) {
+                            for (int dy = -r; dy <= r; ++dy) {
+                                for (int dx = -r; dx <= r; ++dx) {
+                                    if (qAbs(dy) != r && qAbs(dx) != r) continue;
+                                    int rr = desiredRow + dy;
+                                    int cc = desiredCol + dx;
+                                    if (rr < 0 || cc < 0 || rr >= rows || cc >= cols) continue;
+                                    if (ItemDataBase::canStoreItemAt(rr, cc, newGem->itemType, itemsLocal, rows, cols))
+                                        return qMakePair(rr, cc);
+                                }
+                            }
+                        }
+                        return qMakePair(-1, -1);
+                    };
+
+                    QPair<int,int> p = findNearestFree(dialog->requestedRow(), dialog->requestedColumn(), items);
+                    if (p.first >= 0) {
                         newGem->move(p.first, p.second, 0, true);
                         newGem->storage = storage;
                         newGem->location = Enums::ItemLocation::Stored;
                         ReverseBitWriter::replaceValueInBitString(newGem->bitString, Enums::ItemOffsets::Storage, isInExternalStorage(newGem) ? Enums::ItemStorage::Stash : newGem->storage);
                         ReverseBitWriter::replaceValueInBitString(newGem->bitString, Enums::ItemOffsets::Location, newGem->location);
                         addItemToList(newGem, true);
+                        setCurrentStorageHasChanged();
+                        emit itemsChanged();
+                        ++successCount;
                         placed = true;
                     }
                 }
 
-                if (!placed)
+                if (!placed) {
+                    if (storeItemInStorage(newGem, storage, true)) {
+                        ++successCount;
+                    } else {
+                        addItemToList(newGem, true); // still add to list without coords
+                    }
+                }
+            }
+
+            if (successCount > 0)
+                QMessageBox::information(this, tr("Gem(s) Created"), tr("Created %1 gem(s). Remember to save the character (Ctrl+S) to keep the changes!").arg(successCount));
+        }
+
+        dialog->deleteLater();
+    } catch (...) {
+        // Silently handle exceptions
+    }
+}
+
+void ItemsPropertiesSplitter::createOilAt()
+{
+    QAction *action = qobject_cast<QAction *>(sender());
+    if (!action) return;
+
+    QPoint position = action->data().toPoint();
+    if (position.x() < 0 || position.y() < 0) return;
+
+    try {
+        OilCreationWidget *dialog = new OilCreationWidget(this);
+        if (!dialog) return;
+
+        dialog->setItemPosition(position.x(), position.y());
+
+        if (dialog->exec() == QDialog::Accepted)
+        {
+            int copies = dialog->copies();
+            int successCount = 0;
+
+            // Determine target storage: use selected item's storage; if none selected, use active ItemsViewerDialog tab
+            ItemInfo *sel = selectedItem(false);
+            int storage = -1;
+            if (sel)
+                storage = sel->storage;
+            else
+            {
+                ItemsViewerDialog *viewer = nullptr;
+                QWidget *p = parentWidget();
+                while (p) { viewer = qobject_cast<ItemsViewerDialog *>(p); if (viewer) break; p = p->parentWidget(); }
+                if (viewer)
                 {
-                    if (!storeItemInStorage(newGem, storage, true)) {
-                        QMessageBox::warning(this, tr("Storage Failed"), tr("Failed to store gem in storage %1!").arg(storage));
-                        delete newGem;
-                        dialog->deleteLater();
-                        return;
+                    int tab = viewer->tabWidget()->currentIndex();
+                    if (tab <= ItemsViewerDialog::InventoryIndex)
+                        storage = tab;
+                    else if (tab == ItemsViewerDialog::CubeIndex)
+                        storage = tab + 2; // inverse of tabIndexFromItemStorage
+                    else
+                        storage = tab + 3;
+                }
+                else
+                    storage = Enums::ItemStorage::Inventory;
+            }
+
+            PlugyItemsSplitter *plugy = dynamic_cast<PlugyItemsSplitter *>(this);
+            int rows = ItemsViewerDialog::rowsInStorageAtIndex(storage);
+            int cols = ItemsViewerDialog::colsInStorageAtIndex(storage);
+
+            ItemsList placementItems;
+            if (plugy) {
+                quint32 page = plugy->currentPage();
+                placementItems = ItemDataBase::itemsStoredIn(storage, Enums::ItemLocation::Stored, &page);
+            } else {
+                placementItems = ItemDataBase::itemsStoredIn(storage, Enums::ItemLocation::Stored);
+            }
+
+            // Row-major fill across the storage/page
+            for (int r = 0; r < rows && successCount < copies; ++r) {
+                for (int c = 0; c < cols && successCount < copies; ++c) {
+                    if (ItemDataBase::canStoreItemAt(r, c, dialog->getCreatedOil()->itemType, placementItems, rows, cols)) {
+                        ItemInfo *newOil = new ItemInfo(*dialog->getCreatedOil());
+                        newOil->row = r; newOil->column = c; newOil->storage = storage;
+                        newOil->move(r, c, plugy ? plugy->currentPage() : newOil->plugyPage, true);
+                        newOil->location = Enums::ItemLocation::Stored;
+                        ReverseBitWriter::replaceValueInBitString(newOil->bitString, Enums::ItemOffsets::Storage, isInExternalStorage(newOil) ? Enums::ItemStorage::Stash : newOil->storage);
+                        ReverseBitWriter::replaceValueInBitString(newOil->bitString, Enums::ItemOffsets::Location, newOil->location);
+                        addItemToList(newOil, true);
+                        placementItems.append(newOil);
+                        setCurrentStorageHasChanged();
+                        emit itemsChanged();
+                        ++successCount;
+                    }
+                }
+            }
+
+            // Fallback placement for remaining copies
+            int remaining = copies - successCount;
+            for (int i = 0; i < remaining; ++i) {
+                ItemInfo *newOil = new ItemInfo(*dialog->getCreatedOil());
+                newOil->row = dialog->requestedRow();
+                newOil->column = dialog->requestedColumn();
+                newOil->storage = storage;
+
+                // try exact
+                if (ItemDataBase::canStoreItemAt(newOil->row, newOil->column, newOil->itemType, _allItems, rows, cols)) {
+                    newOil->move(newOil->row, newOil->column, newOil->plugyPage);
+                    newOil->storage = storage;
+                    ReverseBitWriter::replaceValueInBitString(newOil->bitString, Enums::ItemOffsets::Storage, isInExternalStorage(newOil) ? Enums::ItemStorage::Stash : newOil->storage);
+                    ReverseBitWriter::replaceValueInBitString(newOil->bitString, Enums::ItemOffsets::Location, newOil->location);
+                    addItemToList(newOil, true);
+                    setCurrentStorageHasChanged();
+                    emit itemsChanged();
+                    ++successCount;
+                    continue;
+                }
+
+                // nearest search
+                bool placed = false;
+                if (plugy) {
+                    quint32 page = plugy->currentPage();
+                    ItemsList itemsOnPage = ItemDataBase::itemsStoredIn(storage, Enums::ItemLocation::Stored, &page);
+                    auto findNearestFree = [&](int desiredRow, int desiredCol, const ItemsList &items) -> QPair<int,int> {
+                        int maxRadius = qMax(rows, cols);
+                        for (int r = 0; r <= maxRadius; ++r) {
+                            for (int dy = -r; dy <= r; ++dy) {
+                                for (int dx = -r; dx <= r; ++dx) {
+                                    if (qAbs(dy) != r && qAbs(dx) != r) continue;
+                                    int rr = desiredRow + dy;
+                                    int cc = desiredCol + dx;
+                                    if (rr < 0 || cc < 0 || rr >= rows || cc >= cols) continue;
+                                    if (ItemDataBase::canStoreItemAt(rr, cc, newOil->itemType, items, rows, cols))
+                                        return qMakePair(rr, cc);
+                                }
+                            }
+                        }
+                        return qMakePair(-1, -1);
+                    };
+
+                    QPair<int,int> p = findNearestFree(dialog->requestedRow(), dialog->requestedColumn(), itemsOnPage);
+                    if (p.first >= 0) {
+                        newOil->move(p.first, p.second, page, true);
+                        newOil->storage = storage;
+                        newOil->location = Enums::ItemLocation::Stored;
+                        ReverseBitWriter::replaceValueInBitString(newOil->bitString, Enums::ItemOffsets::Storage, isInExternalStorage(newOil) ? Enums::ItemStorage::Stash : newOil->storage);
+                        ReverseBitWriter::replaceValueInBitString(newOil->bitString, Enums::ItemOffsets::Location, newOil->location);
+                        addItemToList(newOil, true);
+                        setCurrentStorageHasChanged();
+                        emit itemsChanged();
+                        ++successCount;
+                        placed = true;
+                    }
+                } else {
+                    ItemsList items = ItemDataBase::itemsStoredIn(storage, Enums::ItemLocation::Stored);
+                    auto findNearestFree = [&](int desiredRow, int desiredCol, const ItemsList &itemsLocal) -> QPair<int,int> {
+                        int maxRadius = qMax(rows, cols);
+                        for (int r = 0; r <= maxRadius; ++r) {
+                            for (int dy = -r; dy <= r; ++dy) {
+                                for (int dx = -r; dx <= r; ++dx) {
+                                    if (qAbs(dy) != r && qAbs(dx) != r) continue;
+                                    int rr = desiredRow + dy;
+                                    int cc = desiredCol + dx;
+                                    if (rr < 0 || cc < 0 || rr >= rows || cc >= cols) continue;
+                                    if (ItemDataBase::canStoreItemAt(rr, cc, newOil->itemType, itemsLocal, rows, cols))
+                                        return qMakePair(rr, cc);
+                                }
+                            }
+                        }
+                        return qMakePair(-1, -1);
+                    };
+
+                    QPair<int,int> p = findNearestFree(dialog->requestedRow(), dialog->requestedColumn(), items);
+                    if (p.first >= 0) {
+                        newOil->move(p.first, p.second, 0, true);
+                        newOil->storage = storage;
+                        newOil->location = Enums::ItemLocation::Stored;
+                        ReverseBitWriter::replaceValueInBitString(newOil->bitString, Enums::ItemOffsets::Storage, isInExternalStorage(newOil) ? Enums::ItemStorage::Stash : newOil->storage);
+                        ReverseBitWriter::replaceValueInBitString(newOil->bitString, Enums::ItemOffsets::Location, newOil->location);
+                        addItemToList(newOil, true);
+                        setCurrentStorageHasChanged();
+                        emit itemsChanged();
+                        ++successCount;
+                        placed = true;
                     }
                 }
 
-                // Mark as changed for save
-                setCurrentStorageHasChanged();
-
-                // Emit signal to notify that items have changed
-                emit itemsChanged();
-
-                qDebug() << "Gem added to items. Total items now:" << CharacterInfo::instance().items.character.size();
-
-                // Prompt user to save immediately
-                QMessageBox::information(this, tr("Gem Created"), tr("Gem created successfully at position (%1, %2).\n\n" "Remember to save the character (Ctrl+S) to keep the changes!").arg(newGem->row + 1).arg(newGem->column + 1));
-
-                // Show the item in the properties viewer
-                showItem(newGem);
+                if (!placed) {
+                    if (ItemDataBase::storeItemIn(newOil, static_cast<Enums::ItemStorage::ItemStorageEnum>(storage), rows, cols)) {
+                        addItemToList(newOil, true);
+                        ++successCount;
+                    } else {
+                        addItemToList(newOil, true); // still add to list without coords
+                    }
+                }
             }
+
+            if (successCount > 0)
+                QMessageBox::information(this, tr("Oil(s) Created"), tr("Created %1 oil(s). Remember to save the character (Ctrl+S) to keep the changes!").arg(successCount));
         }
-        
+
         dialog->deleteLater();
     } catch (...) {
         // Silently handle exceptions
@@ -1876,6 +2163,127 @@ void ItemsPropertiesSplitter::createShrineAt()
         setCurrentStorageHasChanged();
         emit itemsChanged();
         INFO_BOX(tr("Created %1 shrine(s)").arg(success));
+    }
+}
+
+void ItemsPropertiesSplitter::createMysticOrbAt()
+{
+    QAction *action = qobject_cast<QAction *>(sender());
+    if (!action) return;
+
+    QPoint position = action->data().toPoint();
+    if (position.x() < 0 || position.y() < 0) return;
+
+    try {
+        MysticOrbCreationWidget *dialog = new MysticOrbCreationWidget(this);
+        if (!dialog) return;
+
+        dialog->setItemPosition(position.x(), position.y());
+
+        if (dialog->exec() == QDialog::Accepted)
+        {
+            int copies = dialog->copies();
+            int successCount = 0;
+
+            ItemInfo *sel = selectedItem(false);
+            int storage = -1;
+            if (sel)
+                storage = sel->storage;
+            else
+            {
+                ItemsViewerDialog *viewer = nullptr;
+                QWidget *p = parentWidget();
+                while (p) { viewer = qobject_cast<ItemsViewerDialog *>(p); if (viewer) break; p = p->parentWidget(); }
+                if (viewer)
+                {
+                    int tab = viewer->tabWidget()->currentIndex();
+                    if (tab <= ItemsViewerDialog::InventoryIndex)
+                        storage = tab;
+                    else if (tab == ItemsViewerDialog::CubeIndex)
+                        storage = tab + 2;
+                    else
+                        storage = tab + 3;
+                }
+                else
+                    storage = Enums::ItemStorage::Inventory;
+            }
+
+            PlugyItemsSplitter *plugy = dynamic_cast<PlugyItemsSplitter *>(this);
+            int rows = ItemsViewerDialog::rowsInStorageAtIndex(storage);
+            int cols = ItemsViewerDialog::colsInStorageAtIndex(storage);
+
+            ItemsList placementItems;
+            if (plugy) { quint32 page = plugy->currentPage(); placementItems = ItemDataBase::itemsStoredIn(storage, Enums::ItemLocation::Stored, &page); }
+            else placementItems = ItemDataBase::itemsStoredIn(storage, Enums::ItemLocation::Stored);
+
+            for (int r = 0; r < rows && successCount < copies; ++r) {
+                for (int c = 0; c < cols && successCount < copies; ++c) {
+                    if (ItemDataBase::canStoreItemAt(r, c, dialog->getCreatedOrb()->itemType, placementItems, rows, cols)) {
+                        ItemInfo *newOrb = new ItemInfo(*dialog->getCreatedOrb());
+                        newOrb->row = r; newOrb->column = c; newOrb->storage = storage;
+                        newOrb->move(r, c, plugy ? plugy->currentPage() : newOrb->plugyPage, true);
+                        newOrb->location = Enums::ItemLocation::Stored;
+                        ReverseBitWriter::replaceValueInBitString(newOrb->bitString, Enums::ItemOffsets::Storage, isInExternalStorage(newOrb) ? Enums::ItemStorage::Stash : newOrb->storage);
+                        ReverseBitWriter::replaceValueInBitString(newOrb->bitString, Enums::ItemOffsets::Location, newOrb->location);
+                        addItemToList(newOrb, true);
+                        placementItems.append(newOrb);
+                        setCurrentStorageHasChanged(); emit itemsChanged(); ++successCount;
+                    }
+                }
+            }
+
+            int remaining = copies - successCount;
+            for (int i = 0; i < remaining; ++i) {
+                ItemInfo *newOrb = new ItemInfo(*dialog->getCreatedOrb());
+                newOrb->row = dialog->requestedRow(); newOrb->column = dialog->requestedColumn(); newOrb->storage = storage;
+
+                if (ItemDataBase::canStoreItemAt(newOrb->row, newOrb->column, newOrb->itemType, _allItems, rows, cols)) {
+                    newOrb->move(newOrb->row, newOrb->column, newOrb->plugyPage);
+                    newOrb->storage = storage;
+                    ReverseBitWriter::replaceValueInBitString(newOrb->bitString, Enums::ItemOffsets::Storage, isInExternalStorage(newOrb) ? Enums::ItemStorage::Stash : newOrb->storage);
+                    ReverseBitWriter::replaceValueInBitString(newOrb->bitString, Enums::ItemOffsets::Location, newOrb->location);
+                    addItemToList(newOrb, true); setCurrentStorageHasChanged(); emit itemsChanged(); ++successCount; continue;
+                }
+
+                bool placed = false;
+                if (plugy) {
+                    quint32 page = plugy->currentPage();
+                    ItemsList itemsOnPage = ItemDataBase::itemsStoredIn(storage, Enums::ItemLocation::Stored, &page);
+                    auto findNearestFree = [&](int desiredRow, int desiredCol, const ItemsList &items) -> QPair<int,int> {
+                        int maxRadius = qMax(rows, cols);
+                        for (int r = 0; r <= maxRadius; ++r) for (int dy = -r; dy <= r; ++dy) for (int dx = -r; dx <= r; ++dx) {
+                            if (qAbs(dy) != r && qAbs(dx) != r) continue; int rr = desiredRow + dy; int cc = desiredCol + dx;
+                            if (rr < 0 || cc < 0 || rr >= rows || cc >= cols) continue; if (ItemDataBase::canStoreItemAt(rr, cc, newOrb->itemType, items, rows, cols)) return qMakePair(rr, cc);
+                        }
+                        return qMakePair(-1, -1);
+                    };
+                    QPair<int,int> p = findNearestFree(dialog->requestedRow(), dialog->requestedColumn(), itemsOnPage);
+                    if (p.first >= 0) { newOrb->move(p.first, p.second, page, true); newOrb->storage = storage; newOrb->location = Enums::ItemLocation::Stored; ReverseBitWriter::replaceValueInBitString(newOrb->bitString, Enums::ItemOffsets::Storage, isInExternalStorage(newOrb) ? Enums::ItemStorage::Stash : newOrb->storage); ReverseBitWriter::replaceValueInBitString(newOrb->bitString, Enums::ItemOffsets::Location, newOrb->location); addItemToList(newOrb, true); setCurrentStorageHasChanged(); emit itemsChanged(); ++successCount; placed = true; }
+                } else {
+                    ItemsList items = ItemDataBase::itemsStoredIn(storage, Enums::ItemLocation::Stored);
+                    auto findNearestFree = [&](int desiredRow, int desiredCol, const ItemsList &itemsLocal) -> QPair<int,int> {
+                        int maxRadius = qMax(rows, cols);
+                        for (int r = 0; r <= maxRadius; ++r) for (int dy = -r; dy <= r; ++dy) for (int dx = -r; dx <= r; ++dx) {
+                            if (qAbs(dy) != r && qAbs(dx) != r) continue; int rr = desiredRow + dy; int cc = desiredCol + dx;
+                            if (rr < 0 || cc < 0 || rr >= rows || cc >= cols) continue; if (ItemDataBase::canStoreItemAt(rr, cc, newOrb->itemType, itemsLocal, rows, cols)) return qMakePair(rr, cc);
+                        }
+                        return qMakePair(-1, -1);
+                    };
+                    QPair<int,int> p = findNearestFree(dialog->requestedRow(), dialog->requestedColumn(), items);
+                    if (p.first >= 0) { newOrb->move(p.first, p.second, 0, true); newOrb->storage = storage; newOrb->location = Enums::ItemLocation::Stored; ReverseBitWriter::replaceValueInBitString(newOrb->bitString, Enums::ItemOffsets::Storage, isInExternalStorage(newOrb) ? Enums::ItemStorage::Stash : newOrb->storage); ReverseBitWriter::replaceValueInBitString(newOrb->bitString, Enums::ItemOffsets::Location, newOrb->location); addItemToList(newOrb, true); setCurrentStorageHasChanged(); emit itemsChanged(); ++successCount; placed = true; }
+                }
+
+                if (!placed) {
+                    if (storeItemInStorage(newOrb, storage, true)) { ++successCount; } else { addItemToList(newOrb, true); }
+                }
+            }
+
+            if (successCount > 0) QMessageBox::information(this, tr("Mystic Orb(s) Created"), tr("Created %1 Mystic Orb(s). Remember to save the character (Ctrl+S) to keep the changes!").arg(successCount));
+        }
+
+        dialog->deleteLater();
+    } catch (...) {
+        // Silently handle exceptions
     }
 }
 

@@ -54,6 +54,7 @@ private:
     QComboBox *_gemCombo;
     QSpinBox *_rowSpin;
     QSpinBox *_columnSpin;
+    QSpinBox *_copiesSpin;
     QPushButton *_createButton;
     QPushButton *_cancelButton;
     QLabel *_previewLabel;
@@ -63,6 +64,12 @@ private:
     ItemInfo *_createdGem;
     int _targetRow;
     int _targetColumn;
+    int _copies;
+
+public:
+    int copies() const { return _copies; }
+    int requestedRow() const { return _targetRow; }
+    int requestedColumn() const { return _targetColumn; }
 };
 
 #endif // GEMCREATIONWIDGET_H

@@ -52,11 +52,10 @@ void RuneCreationWidget::setupUI()
     _columnSpin = new QSpinBox();
     _columnSpin->setRange(0, 9);
     gridLayout->addWidget(_columnSpin, 2, 1);
+    gridLayout->addWidget(new QLabel(tr("Copies: ")), 3, 0);
+    _copiesSpin = new QSpinBox(); _copiesSpin->setRange(1, 999); _copiesSpin->setValue(1); gridLayout->addWidget(_copiesSpin, 3, 1);
     
-    // Enchanted option
-    _enchantedCheckBox = new QCheckBox(tr("Create as Enchanted Rune"));
-    _enchantedCheckBox->setToolTip(tr("Enchanted runes have additional magical properties"));
-    gridLayout->addWidget(_enchantedCheckBox, 3, 0, 1, 2);
+    // Copies control already present; enchanted option removed
     
     mainLayout->addLayout(gridLayout);
     
@@ -239,6 +238,7 @@ void RuneCreationWidget::onCreateClicked()
         return;
     }
     
+    _copies = _copiesSpin->value();
     _createdRune = createRuneItem(runeCode);
     
     if (_createdRune) {

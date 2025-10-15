@@ -10,5 +10,5 @@ HEADERS += qtsingleapplication/QtSingleApplication \
            qtsingleapplication/qtlocalpeer.h
 
 INCLUDEPATH += qtsingleapplication
-
+QT += core gui widgets sql
 !macx: DEFINES += HAS_QTSINGLEAPPLICATION=1

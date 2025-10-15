@@ -52,6 +52,8 @@ void GemCreationWidget::setupUI()
     _columnSpin = new QSpinBox();
     _columnSpin->setRange(0, 9);
     gridLayout->addWidget(_columnSpin, 2, 1);
+    gridLayout->addWidget(new QLabel(tr("Copies: ")), 3, 0);
+    _copiesSpin = new QSpinBox(); _copiesSpin->setRange(1, 999); _copiesSpin->setValue(1); gridLayout->addWidget(_copiesSpin, 3, 1);
     
     mainLayout->addLayout(gridLayout);
     
@@ -264,6 +266,7 @@ void GemCreationWidget::onCreateClicked()
     }
     
     try {
+        _copies = _copiesSpin->value();
         _createdGem = createGemItem(gemCode);
         if (!_createdGem) {
             QMessageBox::critical(this, tr("Creation Failed"), tr("Failed to create gem. Unknown gem type."));

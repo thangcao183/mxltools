@@ -50,7 +50,7 @@ private:
     QComboBox *_runeCombo;
     QSpinBox *_rowSpin;
     QSpinBox *_columnSpin;
-    QCheckBox *_enchantedCheckBox;
+    QSpinBox *_copiesSpin;
     QLabel *_previewLabel;
     QPushButton *_createButton;
     QPushButton *_cancelButton;
@@ -61,6 +61,12 @@ private:
     // Position
     int _targetRow;
     int _targetColumn;
+    int _copies;
+
+public:
+    int copies() const { return _copies; }
+    int requestedRow() const { return _targetRow; }
+    int requestedColumn() const { return _targetColumn; }
 };
 
 #endif // RUNECREATIONWIDGET_H
