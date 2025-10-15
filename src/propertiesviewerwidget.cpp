@@ -743,6 +743,13 @@ void PropertiesViewerWidget::openPropertyEditor()
                     emit itemsChanged(true); // Signal for MainWindow
                     showItem(_item); 
                 });
+        // Forward propertyModified so that unsaved edits mark the document as modified
+        connect(_propertyEditor, &PropertyEditor::propertyModified,
+                [this]() {
+                    qDebug() << "PropertiesViewerWidget: received propertyModified from PropertyEditor, forwarding itemsChanged(true)";
+                    emit itemsChanged();
+                    emit itemsChanged(true);
+                });
     }
     
     _propertyEditor->setItem(_item);

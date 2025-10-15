@@ -133,6 +133,10 @@ void PropertyEditor::setupUI()
     basicLayout->addWidget(_maxDurabilitySpin);
     _basicStatsGroup->setLayout(basicLayout);
     _mainLayout->addWidget(_basicStatsGroup);
+
+    // Connect basic stats changes to property change handlers
+    connect(_requiredLevelSpin, QOverload<int>::of(&QSpinBox::valueChanged), [this](int){ if (!_updatingUI) onPropertyChanged(); });
+    connect(_maxDurabilitySpin, QOverload<int>::of(&QSpinBox::valueChanged), [this](int){ if (!_updatingUI) onPropertyChanged(); });
 }
 
 void PropertyEditor::setItem(ItemInfo *item)
