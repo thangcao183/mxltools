@@ -80,10 +80,14 @@ target_sources(MedianXLOfflineTools PRIVATE
 	reversebitwriter.h
 	runecreationwidget.cpp
 	runecreationwidget.h
+	oilcreationwidget.cpp
+	oilcreationwidget.h
 	gemcreationwidget.cpp
 	gemcreationwidget.h
 	arcanecrystalcreationwidget.cpp
 	arcanecrystalcreationwidget.h
+		mysticorbcreationwidget.cpp
+		mysticorbcreationwidget.h
 	showselecteditemdelegate.cpp
 	showselecteditemdelegate.h
 	skilltreedialog.cpp

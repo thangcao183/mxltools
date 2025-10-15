@@ -24,6 +24,11 @@ set(qtComponents5 ${qtComponents} Widgets)
 find_package(QT NAMES Qt5 COMPONENTS ${qtComponents5})
 if(QT_FOUND)
 	find_package(Qt${QT_VERSION_MAJOR} COMPONENTS ${qtComponents5} REQUIRED)
+	# Try to find Qt Sql optionally; if present, we'll append it to components
+	find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Sql)
+	if(TARGET Qt${QT_VERSION_MAJOR}::Sql)
+		list(APPEND qtComponents5 Sql)
+	endif()
 	set(qtComponents ${qtComponents5})
 	add_compile_definitions(IS_QT5=1)
 
