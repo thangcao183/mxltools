@@ -259,7 +259,7 @@ public:
         ManaBonus,
         ClassSkills = 83,
         Requirements = 91,
-        RequiredLevel = 92,
+    RequiredLevel = 92,
         Oskill = 97,
         ClassOnlySkill = 107,
         DamageToUndead = 122,

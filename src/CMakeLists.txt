@@ -88,6 +88,8 @@ target_sources(MedianXLOfflineTools PRIVATE
 	arcanecrystalcreationwidget.h
 		mysticorbcreationwidget.cpp
 		mysticorbcreationwidget.h
+		itemcreationwidget.cpp
+		itemcreationwidget.h
 	showselecteditemdelegate.cpp
 	showselecteditemdelegate.h
 	skilltreedialog.cpp

@@ -444,6 +444,12 @@ void EnhancedPropertyAdditionEngine::initializeDefaultProperties()
     // Skills
     _propertyDatabase[127] = {127, 0, 5, 0, "All Skills"};
     
+        // Basic stats that are commonly edited via PropertyEditor
+        // DurabilityMax (73) and RequiredLevel (92) - include minimal specs so they are supported even without props.tsv
+        // These specs are conservative defaults matching values in repo props.tsv
+        _propertyDatabase[73] = {73, 90, 9, 0, "Max Durability"};
+        _propertyDatabase[92] = {92, 0, 8, 0, "Required Level"};
+    
     qDebug() << "EnhancedPropertyAdditionEngine: Initialized" << _propertyDatabase.size() << "default properties";
 }
 
@@ -484,9 +490,6 @@ QByteArray EnhancedPropertyAdditionEngine::createStandaloneItemFile(ItemInfo *it
 
 QByteArray EnhancedPropertyAdditionEngine::addPropertyToStandaloneItem(const QByteArray &itemData, int propertyId, int value, quint32 parameter) const
 {
-    if (itemData.size() < 3) return QByteArray();
-    
-    qDebug() << "EnhancedPropertyAdditionEngine: Processing standalone item";
     qDebug() << "  - Input size:" << itemData.size() << "bytes";
     
     // Create bitString from standalone file using centralized helper

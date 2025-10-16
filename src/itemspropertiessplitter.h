@@ -92,6 +92,7 @@ protected slots:
     void createArcaneCrystalAt();
     void createShrineAt();
     void createMysticOrbAt();
+    void createItemAt();
 #ifdef DUMP_INFO_ACTION
     void dumpInfo(ItemInfo *item = 0, bool shouldShowMsgBox = true);
 #endif // DUMP_INFO_ACTION
@@ -139,6 +140,7 @@ protected:
     void createItemActions();
     QAction *separatorAction();
     void createActionsForMysticOrbs(QMenu *parentMenu, bool isItemMO, ItemInfo *item);
+    void createActionsForItems(QMenu *parentMenu, bool isItemMO, ItemInfo *item);
 
     virtual bool shouldAddMoveItemAction() const;
     virtual QString moveItemActionText() const;

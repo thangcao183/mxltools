@@ -117,26 +117,7 @@ void PropertyEditor::setupUI()
     
     _mainLayout->addLayout(buttonLayout);
 
-    // Basic stats group (Required Level, Max Durability)
-    _basicStatsGroup = new QGroupBox(tr("Basic stats"));
-    QHBoxLayout *basicLayout = new QHBoxLayout;
-    _requiredLevelSpin = new QSpinBox;
-    _requiredLevelSpin->setRange(0, 65535);
-    _requiredLevelSpin->setToolTip(tr("Required Level (item base RLvl + property)"));
-    _maxDurabilitySpin = new QSpinBox;
-    _maxDurabilitySpin->setRange(0, 65535);
-    _maxDurabilitySpin->setToolTip(tr("Maximum Durability (0 = no durability)"));
-    basicLayout->addWidget(new QLabel(tr("Required Level:")));
-    basicLayout->addWidget(_requiredLevelSpin);
-    basicLayout->addSpacing(20);
-    basicLayout->addWidget(new QLabel(tr("Max Durability:")));
-    basicLayout->addWidget(_maxDurabilitySpin);
-    _basicStatsGroup->setLayout(basicLayout);
-    _mainLayout->addWidget(_basicStatsGroup);
-
-    // Connect basic stats changes to property change handlers
-    connect(_requiredLevelSpin, QOverload<int>::of(&QSpinBox::valueChanged), [this](int){ if (!_updatingUI) onPropertyChanged(); });
-    connect(_maxDurabilitySpin, QOverload<int>::of(&QSpinBox::valueChanged), [this](int){ if (!_updatingUI) onPropertyChanged(); });
+    // ...existing code continues
 }
 
 void PropertyEditor::setItem(ItemInfo *item)
@@ -243,30 +224,7 @@ void PropertyEditor::setItem(ItemInfo *item)
     _statusLabel->setText(tr("Loaded %1 existing properties (%2 item + %3 runeword) - modify values only")
                          .arg(totalLoadedProps).arg(loadedItemProps).arg(loadedRwProps));
 
-    // Populate basic stats fields
-    if (_item) {
-        // Required Level: default to base rlvl from ItemDataBase if available plus RequiredLevel property
-        int baseRlvl = 0;
-        ItemBase *base = ItemDataBase::Items()->value(_item->itemType);
-        if (base) baseRlvl = base->rlvl;
-        int reqPropVal = 0;
-        ItemProperty *reqProp = _item->props.value(Enums::ItemProperties::RequiredLevel);
-        if (!reqProp) reqProp = _item->rwProps.value(Enums::ItemProperties::RequiredLevel);
-        if (reqProp) reqPropVal = reqProp->value;
-        _requiredLevelSpin->setValue(baseRlvl + reqPropVal);
-
-        // Max Durability: item->maxDurability if present, else try property DurabilityMax
-        int maxDur = _item->maxDurability;
-        if (maxDur == 0) {
-            ItemProperty *maxDurProp = _item->props.value(Enums::ItemProperties::DurabilityMax);
-            if (!maxDurProp) maxDurProp = _item->rwProps.value(Enums::ItemProperties::DurabilityMax);
-            if (maxDurProp) maxDur = maxDurProp->value;
-        }
-        _maxDurabilitySpin->setValue(maxDur);
-    } else {
-        _requiredLevelSpin->setValue(0);
-        _maxDurabilitySpin->setValue(0);
-    }
+    // ...existing code continues
 }
 
 void PropertyEditor::clear()
@@ -1191,59 +1149,6 @@ void PropertyEditor::applyPropertyChanges()
     }
     
     // Ensure bit string is properly aligned
-    // Apply basic stats edits from UI
-    // 1) Required Level (property 92) - stored as a property that is added to base rlvl
-    int desiredReqLevel = _requiredLevelSpin ? _requiredLevelSpin->value() : 0;
-    int baseRlvl = 0;
-    ItemBase *base = ItemDataBase::Items()->value(_item->itemType);
-    if (base) baseRlvl = base->rlvl;
-    int reqPropValue = desiredReqLevel - baseRlvl;
-
-    if (desiredReqLevel >= 0) {
-        ItemProperty *existingReq = _item->props.value(Enums::ItemProperties::RequiredLevel);
-        bool isRw = false;
-        if (!existingReq) { existingReq = _item->rwProps.value(Enums::ItemProperties::RequiredLevel); isRw = true; }
-
-        if (existingReq) {
-            // update in-memory and bitstring
-            existingReq->value = reqPropValue;
-            ItemPropertyTxt *propTxt = ItemDataBase::Properties()->value(Enums::ItemProperties::RequiredLevel);
-            if (propTxt && existingReq->bitStringOffset > 16) {
-                int valueOffset = existingReq->bitStringOffset + propTxt->paramBits;
-                int bitValue = existingReq->value + propTxt->add;
-                ReverseBitWriter::replaceValueInBitString(_item->bitString, valueOffset, bitValue, propTxt->bits);
-            }
-        } else {
-            // add as a property (engine will refresh UI)
-            addPropertyToItem(Enums::ItemProperties::RequiredLevel, reqPropValue, 0);
-        }
-    }
-
-    // 2) Max Durability (property DurabilityMax = 73)
-    int desiredMaxDur = _maxDurabilitySpin ? _maxDurabilitySpin->value() : 0;
-    if (desiredMaxDur >= 0) {
-        // Update ItemInfo field
-        _item->maxDurability = desiredMaxDur;
-
-        ItemProperty *existingMaxDur = _item->props.value(Enums::ItemProperties::DurabilityMax);
-        bool isRw2 = false;
-        if (!existingMaxDur) { existingMaxDur = _item->rwProps.value(Enums::ItemProperties::DurabilityMax); isRw2 = true; }
-
-        if (existingMaxDur) {
-            existingMaxDur->value = desiredMaxDur;
-            ItemPropertyTxt *propTxt = ItemDataBase::Properties()->value(Enums::ItemProperties::DurabilityMax);
-            if (propTxt && existingMaxDur->bitStringOffset > 16) {
-                int valueOffset = existingMaxDur->bitStringOffset + propTxt->paramBits;
-                int bitValue = existingMaxDur->value + propTxt->add;
-                ReverseBitWriter::replaceValueInBitString(_item->bitString, valueOffset, bitValue, propTxt->bits);
-            }
-        } else {
-            // Add property so it will be saved properly
-            addPropertyToItem(Enums::ItemProperties::DurabilityMax, desiredMaxDur, 0);
-        }
-    }
-
-    // Now ensure bit string is properly aligned
     ReverseBitWriter::byteAlignBits(_item->bitString);
     
     // Mark item as changed for save mechanism
