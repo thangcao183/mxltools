@@ -11,6 +11,7 @@
 #include <QComboBox>
 #include <QDir>
 #include <QTextStream>
+#include <QLineEdit>
 #ifdef HAS_QTSQL
 #include <QtSql>
 #endif
@@ -44,9 +45,14 @@ void ItemCreationWidget::setupUI()
     grid->addWidget(new QLabel(tr("Copies: ")), 2, 0);
     _copiesSpin = new QSpinBox(); _copiesSpin->setRange(1, 999); _copiesSpin->setValue(1); grid->addWidget(_copiesSpin, 2, 1);
 
-    // Orb selection combo (loaded from items.tsv)
+    // Orb selection combo (loaded from items.tsv) with filter
     grid->addWidget(new QLabel(tr("Item type: ")), 3, 0);
-    _itemCombo = new QComboBox(); grid->addWidget(_itemCombo, 3, 1);
+    QVBoxLayout *comboLayout = new QVBoxLayout();
+    _filterEdit = new QLineEdit(); _filterEdit->setPlaceholderText(tr("Filter items..."));
+    _itemCombo = new QComboBox(); _itemCombo->setEditable(false);
+    comboLayout->addWidget(_filterEdit);
+    comboLayout->addWidget(_itemCombo);
+    grid->addLayout(comboLayout, 3, 1);
 
     main->addLayout(grid);
 
@@ -105,18 +111,27 @@ void ItemCreationWidget::setupUI()
                     if (parts.size() >= 2) {
                         QString code = parts[0].trimmed();
                         QString name = parts[1].trimmed();
-                        if (!code.isEmpty()) _itemCombo->addItem(code + " - " + name, code);
+                        if (!code.isEmpty()) {
+                            QString display = code + " - " + name;
+                            _itemCombo->addItem(display, code);
+                            _allItems.append(display + "\t" + code);
+                        }
                     }
                 }
             }
             f.close();
         }
         if (_itemCombo->count() == 0) {
-            for (const QString &c : fallback) _itemCombo->addItem(c, c);
+            for (const QString &c : fallback) { _itemCombo->addItem(c, c); _allItems.append(c + "\t" + c); }
         }
-        _itemCombo->addItem("scha - Small Charm of Alteration", "scha");
-        _itemCombo->addItem("scha - Small Charm of Alteration", "char");
+        // ensure some common items are present
+        _itemCombo->addItem("scha - Small Charm of Alteration", "scha"); _allItems.append(QStringLiteral("scha - Small Charm of Alteration\tscha"));
+        _itemCombo->addItem("chra - Small Charm of Finesse", "char"); _allItems.append(QStringLiteral("chra - Small Charm of Finesse\tchar"));
+
+        // connect filter
+        connect(_filterEdit, &QLineEdit::textChanged, this, &ItemCreationWidget::_onFilterTextChanged);
     }
+
 }
 
 void ItemCreationWidget::setItemPosition(int row, int column)
@@ -190,4 +205,29 @@ ItemInfo* ItemCreationWidget::createItemItem()
     item->itemType = selectedCode.toUtf8();
     ReverseBitWriter::byteAlignBits(item->bitString);
     return item;
+}
+
+void ItemCreationWidget::_onFilterTextChanged(const QString &text)
+{
+    QString filter = text.trimmed();
+    _itemCombo->clear();
+    if (filter.isEmpty()) {
+        // restore all
+        for (const QString &entry : qAsConst(_allItems)) {
+            QStringList parts = entry.split('\t');
+            if (parts.size() >= 2) _itemCombo->addItem(parts[0], parts[1]);
+        }
+        return;
+    }
+
+    QString f = filter.toLower();
+    for (const QString &entry : qAsConst(_allItems)) {
+        QStringList parts = entry.split('\t');
+        if (parts.size() < 2) continue;
+        QString disp = parts[0];
+        QString code = parts[1];
+        if (disp.toLower().contains(f) || code.toLower().contains(f)) {
+            _itemCombo->addItem(disp, code);
+        }
+    }
 }

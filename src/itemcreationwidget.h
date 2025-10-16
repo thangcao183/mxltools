@@ -6,6 +6,7 @@
 #include <QPushButton>
 #include <QLabel>
 #include <QComboBox>
+#include <QLineEdit>
 
 class ItemInfo;
 
@@ -27,6 +28,7 @@ public:
 private slots:
     void onCreateClicked();
     void onCancelClicked();
+    void _onFilterTextChanged(const QString &text);
 
 private:
     void setupUI();
@@ -36,6 +38,8 @@ private:
     QSpinBox *_colSpin;
     QSpinBox *_copiesSpin;
     QComboBox *_itemCombo;
+    QLineEdit *_filterEdit;
+    QStringList _allItems; // stored as "display\tdata" or "code\tcode"
     QLabel *_previewLabel;
     QPushButton *_createButton;
     QPushButton *_cancelButton;
