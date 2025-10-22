@@ -565,7 +565,38 @@ void ItemsPropertiesSplitter::importItemFromD2i()
     int cols = ItemsViewerDialog::colsInStorageAtIndex(storage);
     int successCount = 0;
 
-    for (int i = 0; i < copies; ++i)
+    // Build placementItems list similar to createRuneAt so we fill row-major across the storage/page
+    PlugyItemsSplitter *plugy = dynamic_cast<PlugyItemsSplitter *>(this);
+    ItemsList placementItems;
+    if (plugy) {
+        quint32 page = plugy->currentPage();
+        placementItems = ItemDataBase::itemsStoredIn(storage, Enums::ItemLocation::Stored, &page);
+    } else {
+        placementItems = ItemDataBase::itemsStoredIn(storage, Enums::ItemLocation::Stored);
+    }
+
+    // Row-major fill across the storage/page
+    for (int r = 0; r < rows && successCount < copies; ++r) {
+        for (int c = 0; c < cols && successCount < copies; ++c) {
+            if (ItemDataBase::canStoreItemAt(r, c, item->itemType, placementItems, rows, cols)) {
+                ItemInfo *newItem = new ItemInfo(*item);
+                newItem->row = r; newItem->column = c; newItem->storage = storage;
+                newItem->move(r, c, plugy ? plugy->currentPage() : newItem->plugyPage, true);
+                newItem->location = Enums::ItemLocation::Stored;
+                ReverseBitWriter::replaceValueInBitString(newItem->bitString, Enums::ItemOffsets::Storage, isInExternalStorage(newItem) ? Enums::ItemStorage::Stash : newItem->storage);
+                ReverseBitWriter::replaceValueInBitString(newItem->bitString, Enums::ItemOffsets::Location, newItem->location);
+                addItemToList(newItem);
+                placementItems.append(newItem);
+                setCurrentStorageHasChanged();
+                emit itemsChanged();
+                ++successCount;
+            }
+        }
+    }
+
+    // Fallback placement for remaining copies: try storeItemIn or add without coords
+    int remaining = copies - successCount;
+    for (int i = 0; i < remaining; ++i)
     {
         ItemInfo *newItem = new ItemInfo(*item);
         newItem->hasChanged = true;
@@ -575,7 +606,7 @@ void ItemsPropertiesSplitter::importItemFromD2i()
         bool stored = ItemDataBase::storeItemIn(newItem, static_cast<Enums::ItemStorage::ItemStorageEnum>(storage), rows, cols);
         if (!stored)
         {
-            qDebug() << "[DEBUG] importItemFromD2i: storeItemIn failed for storage" << storage << "for copy" << i+1;
+            qDebug() << "[DEBUG] importItemFromD2i fallback: storeItemIn failed for storage" << storage << "for remaining copy" << i+1;
             addItemToList(newItem);
             WARNING_BOX(tr("Item imported but could not be placed in storage %1. Added to list without coordinates.").arg(storage));
         }
