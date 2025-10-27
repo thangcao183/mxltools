@@ -20,13 +20,9 @@ import sys
 import sqlite3
 from pathlib import Path
 
-# Import the property_adder module
-try:
-    from property_adder import PropertyAdder, number_to_binary_lsb, bitstring_to_bytes
-except ImportError:
-    print("❌ Error: property_adder.py not found!")
-    print("Please ensure property_adder.py is in the same directory.")
-    sys.exit(1)
+from property_adder import PropertyAdder
+from bitutils import bitstring_to_bytes
+from property_bits import build_forward_property_bits
 
 
 def add_skill_property(input_file: str, output_file: str, 
@@ -139,23 +135,22 @@ def add_skill_property(input_file: str, output_file: str,
         print(f"   Parameter:   {skill_id} ({param_bits_to_use} bits)")
         print(f"   Value:       +{skill_level} ({bits} bits)")
         
-        # Format: [Property ID 9 bits][Parameter N bits][Value M bits]
-        property_bits = number_to_binary_lsb(property_id, 9)
-        parameter_bits = number_to_binary_lsb(skill_id, param_bits_to_use)
-        
-        # Apply add offset to value before encoding
-        storage_value = skill_level + addv
-        value_bits = number_to_binary_lsb(storage_value, bits)
-        
-        print(f"\n📝 Bit Encoding:")
-        print(f"   Property ID bits:  {property_bits} ({len(property_bits)} bits)")
-        print(f"   Parameter bits:    {parameter_bits} ({len(parameter_bits)} bits)")
-        print(f"   Value bits:        {value_bits} ({len(value_bits)} bits)")
-        print(f"   Storage value:     {storage_value} (display: +{skill_level}, add: {addv})")
-        
-        # Combine all bits
-        full_property = property_bits + parameter_bits + value_bits
-        print(f"   Total bits:        {len(full_property)} bits")
+        # Build forward-order bits using shared helper
+        prop_info_dict = {
+            'name': name,
+            'addv': addv,
+            'bits': bits,
+            'paramBits': param_bits,
+            'h_saveParamBits': h_save_param_bits
+        }
+
+        full_property, vb, pb, total_bits, raw_value = build_forward_property_bits(
+            prop_info_dict, property_id, skill_level, skill_id
+        )
+
+        print(f"\n📝 Bit Encoding (forward order [value][param][ID]):")
+        print(f"   Value bits ({vb}), Param bits ({pb}), ID bits (9)")
+        print(f"   Total bits:        {total_bits} bits")
         print(f"   Combined:          {full_property}")
         
         # Find end marker position (before 0x1FF)

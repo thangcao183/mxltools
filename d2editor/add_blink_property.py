@@ -24,7 +24,8 @@ from pathlib import Path
 
 # Import the property_adder module
 try:
-    from property_adder import PropertyAdder, load_properties_from_db, number_to_binary_lsb
+    from property_adder import PropertyAdder, load_properties_from_db
+    from property_bits import build_forward_property_bits
 except ImportError:
     print("❌ Error: property_adder.py not found!")
     print("Please ensure property_adder.py is in the same directory.")
@@ -117,29 +118,22 @@ def add_blink_property_to_file(input_file: str, output_file: str,
         print(f"   Parameter:   {parameter} ({param_bits} bits)")
         print(f"   Value:       {value} ({bits} bits)")
         
-        # Build property bitstring
-        # Format: [Property ID 9 bits][Parameter N bits][Value M bits]
-        property_bits = number_to_binary_lsb(property_id, 9)
-        
-        if parameter > 0 and param_bits:
-            parameter_bits = number_to_binary_lsb(parameter, param_bits)
-        else:
-            parameter_bits = ''
-        
-        # Apply add offset to value before encoding
-        storage_value = value + addv
-        value_bits = number_to_binary_lsb(storage_value, bits)
-        
-        print(f"\n📝 Bit Encoding:")
-        print(f"   Property ID bits:  {property_bits} ({len(property_bits)} bits)")
-        if parameter_bits:
-            print(f"   Parameter bits:    {parameter_bits} ({len(parameter_bits)} bits)")
-        print(f"   Value bits:        {value_bits} ({len(value_bits)} bits)")
-        print(f"   Storage value:     {storage_value} (display: {value}, add: {addv})")
-        
-        # Combine all bits
-        full_property = property_bits + parameter_bits + value_bits
-        print(f"   Total bits:        {len(full_property)} bits")
+        # Build property bitstring using centralized helper (forward order: [value][param][ID])
+        prop_info = {
+            'name': name,
+            'addv': addv,
+            'bits': bits,
+            'paramBits': param_bits,
+            'h_saveParamBits': None
+        }
+
+        full_property, vb, pb, total_bits, raw_value = build_forward_property_bits(
+            prop_info, property_id, value, parameter
+        )
+
+        print(f"\n📝 Bit Encoding (forward order [value][param][ID]):")
+        print(f"   Value bits ({vb}), Param bits ({pb}), ID bits (9)")
+        print(f"   Total bits:        {total_bits} bits")
         print(f"   Combined:          {full_property}")
         
         # Find end marker position (before 0x1FF)
@@ -177,31 +171,31 @@ def add_blink_property_to_file(input_file: str, output_file: str,
         # Create final bitstring
         final_bitstring = new_content + end_marker + padding
         print(f"🎯 Final bitString: {len(final_bitstring)} bits")
-        
-        # Convert back to bytes (bitstring_to_bytes already adds JM header)
-        from property_adder import bitstring_to_bytes
+
+        # Convert back to bytes (use canonical helper)
+        from bitutils import bitstring_to_bytes
         final_bytes = bitstring_to_bytes(final_bitstring)
-        
+
         print(f"✅ Property inserted successfully")
         print(f"   New bitstring length: {len(final_bitstring)} bits")
         print(f"   New data length: {len(final_bytes)} bytes")
-        
+
         # Save to output file
         with open(output_file, 'wb') as f:
             f.write(final_bytes)
-        
+
         print(f"\n✅ SUCCESS! Item saved to: {output_file}")
-        
+
         # File size comparison
         input_size = Path(input_file).stat().st_size
         output_size = Path(output_file).stat().st_size
         size_diff = output_size - input_size
-        
+
         print(f"\n📦 File Size:")
         print(f"   Input:   {input_size} bytes")
         print(f"   Output:  {output_size} bytes")
         print(f"   Diff:    +{size_diff} bytes")
-        
+
         return True
         
     except Exception as e:

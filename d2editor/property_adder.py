@@ -74,53 +74,13 @@ def load_properties_from_db():
 # Load properties when module is imported
 load_properties_from_db()
 
-def byte_to_binary(byte: int) -> str:
-    """Convert byte to LSB-first binary string (like ItemParser)"""
-    result = ""
-    for i in range(8):
-        result += '1' if (byte >> i) & 1 else '0'
-    return result
-
-def binary_to_byte(binary: str) -> int:
-    """Convert binary string to byte - LSB-first"""
-    result = 0
-    for i in range(min(8, len(binary))):
-        if binary[i] == '1':
-            result |= (1 << i)
-    return result
-
-def create_bitstring(data: bytes) -> str:
-    """Create ItemParser-style bitString from bytes"""
-    bitstring = ""
-    # Skip JM header (first 2 bytes)
-    for i in range(2, len(data)):
-        bitstring += byte_to_binary(data[i])
-    return bitstring
-
-def bitstring_to_bytes(bitstring: str) -> bytes:
-    """Convert bitString back to bytes"""
-    result = bytearray([ord('J'), ord('M')])  # JM header
-    
-    # Convert bitstring to bytes in sequential order
-    for i in range(0, len(bitstring), 8):
-        chunk = bitstring[i:i+8]
-        if len(chunk) < 8:
-            chunk += '0' * (8 - len(chunk))  # Pad with zeros
-        result.append(binary_to_byte(chunk))
-    
-    return bytes(result)
+from bitutils import create_bitstring_from_bytes, bitstring_to_bytes, number_to_binary_msb
+from property_bits import build_forward_property_bits
 
 def number_to_binary(number: int, bits: int) -> str:
-    """Convert number to binary string (MSB-first)"""
-    result = ""
-    for i in range(bits - 1, -1, -1):
-        result += '1' if (number >> i) & 1 else '0'
-    return result
-
-def number_to_binary_lsb(number: int, bits: int) -> str:
-    """Convert number to LSB-first binary string"""
-    binary_msb = number_to_binary(number, bits)
-    return binary_msb[::-1]  # Reverse to get LSB-first
+    """Backwards-compatible helper that returns MSB-first binary strings."""
+    from bitutils import number_to_binary_msb
+    return number_to_binary_msb(number, bits)
 
 def find_all_end_markers(bitstring: str) -> List[int]:
     """Find all positions of end marker (111111111) in bitstring"""
@@ -151,8 +111,8 @@ class PropertyAdder:
             print(f"\n=== LOADING FILE ===")
             print(f"📁 File: {self.filename} ({len(self.original_bytes)} bytes)")
             
-            # Create bitstring
-            self.original_bitstring = create_bitstring(self.original_bytes)
+            # Create bitstring (use canonical helper)
+            self.original_bitstring = create_bitstring_from_bytes(self.original_bytes)
             print(f"📊 Original bitString: {len(self.original_bitstring)} bits")
             
             # Find end markers
@@ -191,19 +151,24 @@ class PropertyAdder:
             raise ValueError(f"Unknown property ID: {prop_id}")
         
         prop = PROPERTIES[prop_id]
-        raw_value = value + prop["add"]
-        
-        # Create property bits (LSB-first)
-        prop_id_bits = number_to_binary_lsb(prop_id, 9)
-        prop_value_bits = number_to_binary_lsb(raw_value, prop["bits"])
-        property_bits = prop_id_bits + prop_value_bits
-        
+        # Use shared helper to build MSB-forward bits: [value][param][ID]
+        prop_info = {
+            'name': prop.get('name'),
+            'addv': prop.get('add', 0),
+            'bits': prop.get('bits', 0),
+            'paramBits': prop.get('paramBits', 0),
+            'h_saveParamBits': None
+        }
+
+        prop_bits, vb, pb, total_bits, raw_value = build_forward_property_bits(prop_info, prop_id, value, 0)
+
         print(f"🔧 Property: {prop['name']} (ID={prop_id}, Value={value})")
-        print(f"   - ID bits (9): {prop_id_bits}")
-        print(f"   - Value bits ({prop['bits']}): {prop_value_bits} (raw={raw_value})")
-        print(f"   - Total: {len(property_bits)} bits")
-        
-        return property_bits, len(property_bits)
+        print(f"   - Value bits ({vb}): (raw={raw_value})")
+        if pb > 0:
+            print(f"   - Param bits ({pb})")
+        print(f"   - Total: {total_bits} bits")
+
+        return prop_bits, total_bits
     
     def add_properties(self, properties: List[Tuple[int, int]]) -> bool:
         """
