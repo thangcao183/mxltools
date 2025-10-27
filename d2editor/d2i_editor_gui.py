@@ -34,6 +34,8 @@ class D2IEditor:
         
         # Data
         self.property_db = {}
+        self.prop_combo = None
+        self.prop_list = []
         self.skill_db = {}
         self.current_item: Optional[ParsedItem] = None
         self.current_file = ""
@@ -514,30 +516,38 @@ class PropertyEditDialog:
         ttk.Label(frame, text="Property:").grid(row=0, column=0, sticky=tk.W, pady=5)
         
         self.prop_var = tk.StringVar()
-        prop_combo = ttk.Combobox(frame, textvariable=self.prop_var, width=50)
+        self.prop_combo = ttk.Combobox(frame, textvariable=self.prop_var, width=50)
         
         # Build property list
-        prop_list = []
+        self.prop_list = []        
         for prop_id, info in sorted(self.property_db.items()):
-            prop_list.append(f"{prop_id}: {info['name']}")
-        prop_combo['values'] = prop_list
-        
+            self.prop_list.append(f"{prop_id}: {info['desc'].strip() or info['name']}")
+        self.prop_combo['values'] = self.prop_list
+
         if initial_prop_id is not None:
             prop_info = self.property_db.get(initial_prop_id, {})
-            prop_combo.set(f"{initial_prop_id}: {prop_info.get('name', 'Unknown')}")
-        
-        prop_combo.grid(row=0, column=1, pady=5, sticky=tk.EW)
-        
+            self.prop_combo.set(f"{initial_prop_id}: {prop_info.get('desc', 'Unknown')}")
+
+        self.prop_combo.grid(row=0, column=1, pady=5, sticky=tk.EW)
+
         # Value
         ttk.Label(frame, text="Value:").grid(row=1, column=0, sticky=tk.W, pady=5)
         self.value_var = tk.IntVar(value=initial_value)
         ttk.Entry(frame, textvariable=self.value_var).grid(row=1, column=1, pady=5, sticky=tk.EW)
+        ttk.Button(frame, text="Max", command=lambda: self.value_var.set(2**prop_info.get("bits") - 1 - prop_info.get("addv"))).grid(row=1, column=2, pady=5)
         
         # Parameter
         ttk.Label(frame, text="Parameter:").grid(row=2, column=0, sticky=tk.W, pady=5)
         self.param_var = tk.IntVar(value=initial_param)
         ttk.Entry(frame, textvariable=self.param_var).grid(row=2, column=1, pady=5, sticky=tk.EW)
+        # --- Filter entry
+        self.filter_var = tk.StringVar()
+        filter_entry = ttk.Entry(frame, textvariable=self.filter_var, width=20)
+        filter_entry.grid(row=0, column=2, padx=5, pady=5, sticky=tk.W)
+        filter_entry.insert(0, "")
         
+        # --- Event: update combo when typing
+        self.filter_var.trace_add("write", self.filter_properties)
         # Skill lookup (if parameter is set)
         ttk.Label(frame, text="Skill Name:").grid(row=3, column=0, sticky=tk.W, pady=5)
         self.skill_label = ttk.Label(frame, text="", foreground="blue")
@@ -558,7 +568,17 @@ class PropertyEditDialog:
         
         # Wait for dialog
         self.dialog.wait_window()
-    
+        
+    def filter_properties(self, *args):
+        keyword = self.filter_var.get().strip().lower()
+        if keyword == "" or keyword == "filter...":
+            filtered = self.prop_list
+        else:
+            filtered = [
+                item for item in self.prop_list if keyword in item.lower()
+            ]
+        self.prop_combo['values'] = filtered
+        
     def update_skill_name(self, *args):
         """Update skill name label"""
         try:
