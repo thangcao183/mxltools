@@ -78,6 +78,12 @@ class ParsedItem:
     # Quality-specific data
     set_or_unique_id: int = 0
     
+    # Armor/Weapon fields
+    defense: int = 0
+    max_durability: int = 0
+    current_durability: int = 0
+    quantity: int = -1  # -1 means not stackable
+    
     # Properties
     properties: List[ItemProperty] = None
     runeword_properties: List[ItemProperty] = None
@@ -166,6 +172,115 @@ def number_to_binary_msb(value: int, num_bits: int, addv: int) -> str:
         raise ValueError(f"Value {value} exceeds maximum for {num_bits} bits ({max_value})")
     
     return format(value, f'0{num_bits}b')
+
+
+# Item database cache
+_ITEM_TYPES_CACHE = {}
+_ITEM_TYPE_HIERARCHY_CACHE = {}
+_PROPERTY_METADATA_CACHE = {}
+
+
+def get_item_types(item_code: str, db_path: str = '../d2_items.db') -> List[str]:
+    """Get item types from database"""
+    global _ITEM_TYPES_CACHE
+    
+    if item_code in _ITEM_TYPES_CACHE:
+        return _ITEM_TYPES_CACHE[item_code]
+    
+    try:
+        import sqlite3
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT type FROM items WHERE code = ?", (item_code,))
+        row = cursor.fetchone()
+        conn.close()
+        
+        if row and row[0]:
+            types = [t.strip() for t in row[0].split(',')]
+            _ITEM_TYPES_CACHE[item_code] = types
+            return types
+    except Exception as e:
+        print(f"Warning: Could not load item types for {item_code}: {e}")
+    
+    _ITEM_TYPES_CACHE[item_code] = []
+    return []
+
+
+def get_item_stackable(item_code: str, db_path: str = '../d2_items.db') -> bool:
+    """Check if item is stackable from database"""
+    try:
+        import sqlite3
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT stackable FROM items WHERE code = ?", (item_code,))
+        row = cursor.fetchone()
+        conn.close()
+        
+        if row and row[0]:
+            return bool(int(row[0]))
+    except Exception as e:
+        print(f"Warning: Could not check stackable for {item_code}: {e}")
+    
+    return False
+
+
+def item_types_inherit_from_type(item_types: List[str], parent_type: str) -> bool:
+    """
+    Check if any of the item types inherits from parent_type.
+    
+    This is a simplified implementation that checks:
+    1. Direct match in types list
+    2. Known armor parent types: armo, tors, helm, shie, glov, boot, belt
+    3. Known weapon parent types: weap, swor, axe, mace, pole, bow, xbow, staf, wand, knif, spea, etc.
+    
+    For full hierarchy resolution, would need to recursively check ItemTypes table.
+    """
+    if parent_type in item_types:
+        return True
+    
+    # Define known type hierarchies
+    armor_types = ['armo', 'tors', 'helm', 'shie', 'glov', 'boot', 'belt', 'pelt', 'phlm', 
+                   'ashd', 'pala', 'head', 'circ', 'cr', 'ba', 'dr', 'bhlm', 'bshi', 'btor',
+                   'hlms', 'shld', 'tow', 'kite', 'smal']
+    weapon_types = ['weap', 'swor', 'axe', 'mace', 'pole', 'bow', 'xbow', 'staf', 'wand',
+                    'knif', 'spea', 'jave', 'club', 'scep', 'hamm', 'h2h', 'orb',
+                    'bswd', 'baxe', 'bmac', 'bpol', 'bowq', 'xboq', 'bstf', 'rod',
+                    'tkni', 'taxe', 'jav', 'abow', 'aspe']
+    
+    if parent_type == 'armo':
+        return any(t in armor_types for t in item_types)
+    elif parent_type == 'weap':
+        return any(t in weapon_types for t in item_types)
+    
+    return False
+
+
+def get_property_metadata(prop_id: int, db_path: str = 'data/props.db') -> Optional[Dict]:
+    """Get property metadata from database"""
+    global _PROPERTY_METADATA_CACHE
+    
+    if prop_id in _PROPERTY_METADATA_CACHE:
+        return _PROPERTY_METADATA_CACHE[prop_id]
+    
+    try:
+        import sqlite3
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT addv, bits FROM props WHERE code = ?", (prop_id,))
+        row = cursor.fetchone()
+        conn.close()
+        
+        if row:
+            metadata = {
+                'add': row[0] if row[0] is not None else 0,
+                'bits': row[1] if row[1] is not None else 0
+            }
+            _PROPERTY_METADATA_CACHE[prop_id] = metadata
+            return metadata
+    except Exception as e:
+        print(f"Warning: Could not load property metadata for {prop_id}: {e}")
+    
+    return None
 
 
 class D2ItemParser:
@@ -529,9 +644,45 @@ class D2ItemParser:
             # Tome of ID bit (always present)
             reader.skip()
             
-            # For now, skip item-specific fields (defense, durability, quantity, sockets)
-            # TODO: Implement proper item type detection and conditional parsing
-            # Charms don't have these fields, so we skip directly to properties
+            # Item-specific fields (defense, durability, quantity)
+            # Get item types from database to determine what fields to parse
+            item_types = get_item_types(item.item_type)
+            is_armor = item_types_inherit_from_type(item_types, 'armo')
+            is_weapon = item_types_inherit_from_type(item_types, 'weap')
+            is_stackable = get_item_stackable(item.item_type)
+            
+            # Defense (armor only)
+            if is_armor:
+                defense_prop = get_property_metadata(31)  # Defense property ID = 31
+                if defense_prop:
+                    raw_defense = reader.read_number(defense_prop['bits'])
+                    item.defense = raw_defense - defense_prop['add']
+                    print(f"Armor defense: {item.defense} (raw: {raw_defense}, bits: {defense_prop['bits']}, add: {defense_prop['add']})")
+            
+            # Durability (armor and weapon)
+            if is_armor or is_weapon:
+                max_dur_prop = get_property_metadata(73)  # MaxDurability property ID = 73
+                if max_dur_prop:
+                    raw_max_dur = reader.read_number(max_dur_prop['bits'])
+                    item.max_durability = raw_max_dur - max_dur_prop['add']
+                    print(f"Max durability: {item.max_durability} (raw: {raw_max_dur}, bits: {max_dur_prop['bits']})")
+                    
+                    # Current durability (only if max_durability > 0)
+                    if item.max_durability > 0:
+                        dur_prop = get_property_metadata(72)  # Durability property ID = 72
+                        if dur_prop:
+                            raw_dur = reader.read_number(dur_prop['bits'])
+                            item.current_durability = raw_dur - dur_prop['add']
+                            print(f"Current durability: {item.current_durability} (raw: {raw_dur}, bits: {dur_prop['bits']})")
+                            
+                            # Sanity check
+                            if item.max_durability < item.current_durability:
+                                item.max_durability = item.current_durability
+            
+            # Quantity (stackable items only)
+            if is_stackable:
+                item.quantity = reader.read_number(9)
+                print(f"Stackable item quantity: {item.quantity}")
             
             # Sockets number (if socketed)
             if item.is_socketed:
@@ -653,16 +804,16 @@ def main():
     cursor.execute("SELECT code, name, h_descNegative, h_descStringAdd, addv, bits, paramBits, h_saveParamBits FROM props WHERE bits > 0")
     
     for row in cursor.fetchall():
-        code, name, h_descNegative, h_descStringAdd,addv, bits, h_save_param_bits = row
+        code, name, h_descNegative, h_descStringAdd, addv, bits, paramBits, h_save_param_bits = row
         
         # Clean up empty strings
-        if param_bits == '':
-            param_bits = None
+        if paramBits == '':
+            paramBits = None
         if h_save_param_bits == '':
             h_save_param_bits = None
         
         property_db[code] = {
-            'name': name + " " + h_descNegative + " " + h_descStringAdd or f'prop_{code}',
+            'name': (name or '') + " " + (h_descNegative or '') + " " + (h_descStringAdd or '') or f'prop_{code}',
             'addv': addv if addv is not None else 0,
             'bits': bits,
             'h_saveParamBits': h_save_param_bits
@@ -697,6 +848,15 @@ def main():
         print(f"Ethereal: {item.is_ethereal}")
         print(f"Socketed: {item.is_socketed} (sockets: {item.num_sockets})")
         print(f"Runeword: {item.is_runeword}")
+        
+        # Display armor/weapon stats
+        if item.defense > 0:
+            print(f"Defense: {item.defense}")
+        if item.max_durability > 0:
+            print(f"Durability: {item.current_durability}/{item.max_durability}")
+        if item.quantity >= 0:
+            print(f"Quantity: {item.quantity}")
+        
         print(f"\nItem Properties: {len(item.properties)}")
         
         for i, prop in enumerate(item.properties):
