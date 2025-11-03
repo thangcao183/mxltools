@@ -156,12 +156,12 @@ def create_bitstring_from_bytes(data: bytes) -> str:
     return bitstring
 
 
-def number_to_binary_msb(value: int, num_bits: int) -> str:
+def number_to_binary_msb(value: int, num_bits: int, addv: int) -> str:
     """Convert number to MSB-first binary string with specified bit length"""
     if value < 0:
         raise ValueError(f"Value must be non-negative: {value}")
     
-    max_value = (1 << num_bits) - 1  # 2^num_bits - 1
+    max_value = (1 << num_bits) - 1 - addv  # 2^num_bits - 1
     if value > max_value:
         raise ValueError(f"Value {value} exceeds maximum for {num_bits} bits ({max_value})")
     
@@ -639,14 +639,6 @@ class D2ItemParser:
             h_save_str = str(h_save).strip()
             if h_save_str and h_save_str != '' and h_save_str.isdigit():
                 return int(h_save_str)
-        
-        # Fall back to paramBits
-        param_bits_db = prop_info.get('paramBits')
-        if param_bits_db is not None:
-            param_bits_str = str(param_bits_db).strip()
-            if param_bits_str and param_bits_str != '' and param_bits_str.isdigit():
-                return int(param_bits_str)
-        
         return 0
 
 
@@ -661,7 +653,7 @@ def main():
     cursor.execute("SELECT code, name, h_descNegative, h_descStringAdd, addv, bits, paramBits, h_saveParamBits FROM props WHERE bits > 0")
     
     for row in cursor.fetchall():
-        code, name, h_descNegative, h_descStringAdd,addv, bits, param_bits, h_save_param_bits = row
+        code, name, h_descNegative, h_descStringAdd,addv, bits, h_save_param_bits = row
         
         # Clean up empty strings
         if param_bits == '':
@@ -673,7 +665,6 @@ def main():
             'name': name + " " + h_descNegative + " " + h_descStringAdd or f'prop_{code}',
             'addv': addv if addv is not None else 0,
             'bits': bits,
-            'paramBits': param_bits,
             'h_saveParamBits': h_save_param_bits
         }
     

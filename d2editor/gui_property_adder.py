@@ -30,14 +30,11 @@ def load_properties(limit=None):
     for row in cur.fetchall():
         rowd = dict(zip(cols, row))
         code = rowd.get('code')
+        bits = rowd.get('bits')
+        addv = rowd.get('addv')
         # prefer header-derived display fields
         display = None
-        for k in ('h_descStringAdd', 'h_descStringAdd_orig', 'h_descPositive', 'h_descStringAdd', 'name', 'h_stat'):
-            if k in rowd and rowd[k]:
-                display = rowd[k]
-                break
-        if not display:
-            display = str(code)
+        display = rowd.get('h_descPositive') + " "+ rowd.get('h_descStringAdd') + " " + rowd.get('name')
         props.append((int(code), display, rowd))
         if limit and len(props) >= limit:
             break
@@ -161,7 +158,19 @@ def main():
                 messagebox.showwarning('No selection', 'Please select a property to add')
                 return
             item = self.listbox.get(sel[0])
+            print(item)
             code = int(item.split(' - ', 1)[0])
+            connect = sqlite3.connect(str(DB_PATH))
+            cur = connect.cursor()
+            cur.execute('SELECT bits, addv FROM props WHERE code=?', (code,))
+            row = cur.fetchone()
+            connect.close()
+            if not row:
+                messagebox.showerror('Error', f'Property code {code} not found in database')
+                return
+            bits = int(row[0])
+            addv = int(row[1])
+            print(row)
             display = item.split(' - ', 1)[1]
             # prevent duplicates
             if any(c['code'] == code for c in self.columns):
@@ -180,6 +189,8 @@ def main():
                 col.destroy()
                 self.columns = [c for c in self.columns if c['frame'] is not col]
             ttk.Button(col, text='Remove', command=remove).pack(pady=2)
+            ttk.Button(col, text="Max", command=lambda: val_var.set(str((2**bits) - 1 - addv))).pack(pady=2)
+
             # move buttons
             def move_left():
                 idx = next((i for i, it in enumerate(self.columns) if it['frame'] is col), None)
