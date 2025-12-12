@@ -71,7 +71,7 @@ def try_decompress(compressed: bytes) -> bytes:
 
 def main():
     p = argparse.ArgumentParser(description='Extract TSV (or original) from a Qt .dat resource file')
-    p.add_argument('input', nargs='?', default='resources/data/props.dat', help='Input .dat file path')
+    p.add_argument('input', nargs='?', default='resources/data/en/props.dat', help='Input .dat file path')
     p.add_argument('output', nargs='?', default='generated/props_from_dat.tsv', help='Output file path')
     args = p.parse_args()
 

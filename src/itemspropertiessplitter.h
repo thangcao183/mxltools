@@ -77,6 +77,7 @@ protected slots:
     void exportText();
     void copyAllItemsBBCode(QAction *action);
     void copyItemBBCode(QAction *action);
+    void toggleEthereal();
     void disenchantSelectedItem();
 //    void unsocketItem();
     void downgradeSelectedRune();
