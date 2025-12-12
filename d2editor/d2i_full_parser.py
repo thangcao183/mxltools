@@ -71,12 +71,15 @@ class ParsedItem:
     # Extended item data (only if is_extended == True)
     num_sockets: int = 0
     guid: int = 0
+    guid_offset: int = 0  # Absolute position in bitstring
+    ethereal_offset: int = 0  # Absolute position of ethereal bit
     ilvl: int = 0
     quality: ItemQuality = ItemQuality.Normal
     variable_graphic_index: int = 0
     
     # Quality-specific data
     set_or_unique_id: int = 0
+    set_or_unique_id_offset: int = 0  # Absolute position in bitstring
     
     # Armor/Weapon fields
     defense: int = 0
@@ -313,10 +316,7 @@ class D2ItemParser:
         return self.parse_item(data, bitstring, reader)
     
     def save_file(self, item: ParsedItem, filename: str):
-        """
-        Save a ParsedItem to a D2I file
-        Simply writes the current bitstring back to file
-        """
+        """Save a ParsedItem to a D2I file"""
         # Convert bitstring to bytes (reverse PREPEND)
         data = self.bitstring_to_bytes(item.bitstring)
         
@@ -384,6 +384,77 @@ class D2ItemParser:
 
         print(f"Modified property {prop.prop_id} ({prop_info.get('name', 'unknown')}): value={new_value}, param={new_param}")
 
+    def change_guid(self, item: ParsedItem, new_guid: int):
+        """Change item GUID"""
+        if not item.is_extended:
+            raise ValueError("Cannot change GUID of simple item")
+        
+        if new_guid < 0 or new_guid > 0xFFFFFFFF:
+            raise ValueError("GUID must be a 32-bit integer")
+            
+        # Convert to bits
+        guid_bits = number_to_binary_msb(new_guid, 32, 0)
+        
+        # Replace in bitstring
+        offset = item.guid_offset
+        item.bitstring = item.bitstring[:offset] + guid_bits + item.bitstring[offset+32:]
+        
+        # Update item
+        item.guid = new_guid
+        print(f"Changed GUID to {new_guid}")
+
+    def change_unique_id(self, item: ParsedItem, new_id: int):
+        """Change Set/Unique ID"""
+        if not item.is_extended:
+            raise ValueError("Cannot change Unique ID of simple item")
+            
+        if item.quality not in [ItemQuality.Set, ItemQuality.Unique]:
+            raise ValueError("Item is not Set or Unique quality")
+        
+        if new_id < 0 or new_id > 0x7FFF:  # 15 bits
+            raise ValueError("Unique ID must be a 15-bit integer (0-32767)")
+            
+        # Convert to bits
+        id_bits = number_to_binary_msb(new_id, 15, 0)
+        
+        # Replace in bitstring
+        offset = item.set_or_unique_id_offset
+        item.bitstring = item.bitstring[:offset] + id_bits + item.bitstring[offset+15:]
+        
+        # Update item
+        item.set_or_unique_id = new_id
+        print(f"Changed Unique ID to {new_id}")
+    
+    def change_ethereal(self, item: ParsedItem, is_ethereal: bool):
+        """Change item ethereal status"""
+        offset = item.ethereal_offset
+        if offset is None or offset < 0 or offset >= len(item.bitstring):
+            print(f"Error: Invalid ethereal offset {offset}")
+            return
+
+        # Verify context to ensure we are at the right bit
+        # simple_item is at offset + 1
+        # is_personalized is at offset - 2 (skip 1 bit after ethereal)
+        
+        if offset + 1 < len(item.bitstring):
+            simple_bit = item.bitstring[offset+1]
+            expected_simple = '0' if item.is_extended else '1'
+            if simple_bit != expected_simple:
+                print(f"WARNING: simple_item bit mismatch at {offset+1}. Expected {expected_simple}, got {simple_bit}")
+                # If mismatch, try to find the pattern?
+                # For now just warn
+        
+        if offset - 2 >= 0:
+            personalized_bit = item.bitstring[offset-2]
+            expected_personalized = '1' if item.is_personalized else '0'
+            if personalized_bit != expected_personalized:
+                print(f"WARNING: is_personalized bit mismatch at {offset-2}. Expected {expected_personalized}, got {personalized_bit}")
+
+        new_bit = '1' if is_ethereal else '0'
+        item.bitstring = item.bitstring[:offset] + new_bit + item.bitstring[offset+1:]
+        
+        item.is_ethereal = is_ethereal
+        print(f"Changed Ethereal status to {is_ethereal} at offset {offset}")
     
     def add_property_to_item(self, item: ParsedItem, prop_id: int, value: int, param: int = 0):
         """
@@ -447,6 +518,19 @@ class D2ItemParser:
         # Update end marker position (moved by property length)
         item.end_marker_position += total_bits
 
+        # Update offsets of fixed fields that are above the insertion point
+        if item.is_extended:
+            if item.guid_offset >= insert_pos:
+                item.guid_offset += total_bits
+            if item.set_or_unique_id_offset >= insert_pos:
+                item.set_or_unique_id_offset += total_bits
+        
+        if item.ethereal_offset >= insert_pos:
+            item.ethereal_offset += total_bits
+        
+        if item.properties_start_offset >= insert_pos:
+            item.properties_start_offset += total_bits
+
         print(f"Added property {prop_id} ({prop_info['name']}): value={value}, param={param}")
     
     def delete_property_from_item(self, item: ParsedItem, prop_index: int):
@@ -476,6 +560,19 @@ class D2ItemParser:
 
         # Update end marker position (moved back by property length)
         item.end_marker_position -= deleted_bits
+
+        # Update offsets of fixed fields that are above the deletion point
+        if item.is_extended:
+            if item.guid_offset > deleted_offset:
+                item.guid_offset -= deleted_bits
+            if item.set_or_unique_id_offset > deleted_offset:
+                item.set_or_unique_id_offset -= deleted_bits
+        
+        if item.ethereal_offset > deleted_offset:
+            item.ethereal_offset -= deleted_bits
+        
+        if item.properties_start_offset > deleted_offset:
+            item.properties_start_offset -= deleted_bits
 
         # BUGFIX: update offsets for remaining properties (both item and runeword)
         for p in item.properties:
@@ -558,6 +655,7 @@ class D2ItemParser:
         item.is_extended = not simple_item
         
         item.is_ethereal = reader.read_bool()
+        item.ethereal_offset = reader.get_absolute_pos()
         reader.skip()
         item.is_personalized = reader.read_bool()
         reader.skip()
@@ -592,6 +690,7 @@ class D2ItemParser:
             # Extended item - parse additional fields
             item.num_sockets = reader.read_number(3)
             item.guid = reader.read_number(32)
+            item.guid_offset = reader.get_absolute_pos()
             item.ilvl = reader.read_number(7)
             item.quality = ItemQuality(reader.read_number(4))
             
@@ -619,6 +718,7 @@ class D2ItemParser:
             
             elif item.quality in [ItemQuality.Set, ItemQuality.Unique]:
                 item.set_or_unique_id = reader.read_number(15)
+                item.set_or_unique_id_offset = reader.get_absolute_pos()
                 print(f"Set/Unique ID: {item.set_or_unique_id}")
             
             elif item.quality in [ItemQuality.Rare, ItemQuality.Crafted]:
@@ -685,7 +785,8 @@ class D2ItemParser:
                 print(f"Stackable item quantity: {item.quantity}")
             
             # Sockets number (if socketed)
-            if item.is_socketed:
+            # Stackable items cannot have sockets (usually), so ignore is_socketed if stackable
+            if item.is_socketed and not is_stackable:
                 actual_sockets = reader.read_number(4)
                 print(f"Socketed item: actual sockets = {actual_sockets}")
             

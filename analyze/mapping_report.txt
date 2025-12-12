@@ -1,0 +1,40 @@
+Mapping report
+Numeric columns attempted: add,bits,bitsParamSave,bitsSave,descpriority,descval,dgrp,dgrpfunc,dgrpval,saveParamBits
+
+Column: add
+  total unambiguous matches: 0
+
+Column: bits
+  total unambiguous matches: 0
+
+Column: bitsParamSave
+  total unambiguous matches: 0
+
+Column: bitsSave
+  total unambiguous matches: 0
+
+Column: descpriority
+  total unambiguous matches: 2
+    f18 -> 1
+    f40 -> 1
+
+Column: descval
+  total unambiguous matches: 5
+    f16 -> 2
+    f40 -> 2
+    f17 -> 1
+
+Column: dgrp
+  total unambiguous matches: 1
+    f16 -> 1
+
+Column: dgrpfunc
+  total unambiguous matches: 0
+
+Column: dgrpval
+  total unambiguous matches: 1
+    f16 -> 1
+
+Column: saveParamBits
+  total unambiguous matches: 0
+

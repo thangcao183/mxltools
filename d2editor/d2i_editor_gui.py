@@ -132,11 +132,23 @@ class D2IEditor:
         info_frame = ttk.LabelFrame(main_frame, text="Item Information", padding=10)
         info_frame.pack(fill=tk.X, pady=(0, 10))
         
+        # Container for text and buttons
+        info_content = ttk.Frame(info_frame)
+        info_content.pack(fill=tk.BOTH, expand=True)
+
         # Item info labels
-        self.info_text = tk.Text(info_frame, height=6, wrap=tk.WORD, bg="#f0f0f0", fg="#000000")
-        self.info_text.pack(fill=tk.BOTH)
+        self.info_text = tk.Text(info_content, height=6, wrap=tk.WORD, bg="#f0f0f0", fg="#000000")
+        self.info_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.info_text.insert("1.0", "No file loaded. Use File > Open D2I to load an item.")
         self.info_text.config(state=tk.DISABLED)
+        
+        # Info buttons
+        info_btns = ttk.Frame(info_content)
+        info_btns.pack(side=tk.RIGHT, fill=tk.Y, padx=(5, 0))
+        
+        ttk.Button(info_btns, text="Change GUID", command=self.change_guid).pack(fill=tk.X, pady=2)
+        ttk.Button(info_btns, text="Change Unique ID", command=self.change_unique_id).pack(fill=tk.X, pady=2)
+        ttk.Button(info_btns, text="Toggle Ethereal", command=self.toggle_ethereal).pack(fill=tk.X, pady=2)
         
         # Middle: Properties panel with buttons
         props_frame = ttk.LabelFrame(main_frame, text="Properties", padding=10)
@@ -307,25 +319,32 @@ class D2IEditor:
             return
         
         # Create dialog
-        dialog = PropertyEditDialog(self.root, self.property_db, self.skill_db, title="Add Property")
+        dialog = PropertyEditDialog(self.root, self.property_db, self.skill_db, title="Add Property", allow_multiple=True)
         
         if dialog.result:
-            prop_id, value, param = dialog.result
+            # Handle list of properties
+            properties_to_add = dialog.result if isinstance(dialog.result, list) else [dialog.result]
             
-            try:
-                # Add property using parser
-                self.parser.add_property_to_item(self.current_item, prop_id, value, param)
-                
-                # Update tree
-                self.update_properties_tree()
-                self.update_item_info()
-                
-                messagebox.showinfo("Success", f"Property {prop_id} added successfully!")
-                
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to add property:\n{str(e)}")
-                import traceback
-                traceback.print_exc()
+            success_count = 0
+            errors = []
+            
+            for prop_id, value, param in properties_to_add:
+                try:
+                    # Add property using parser
+                    self.parser.add_property_to_item(self.current_item, prop_id, value, param)
+                    success_count += 1
+                except Exception as e:
+                    errors.append(f"Prop {prop_id}: {str(e)}")
+            
+            # Update tree
+            self.update_properties_tree()
+            self.update_item_info()
+            
+            if errors:
+                error_msg = "\n".join(errors)
+                messagebox.showwarning("Partial Success", f"Added {success_count} properties.\nErrors:\n{error_msg}")
+            else:
+                messagebox.showinfo("Success", f"Added {success_count} properties successfully!")
     
     def edit_property(self):
         """Edit selected property"""
@@ -416,6 +435,85 @@ class D2IEditor:
             import traceback
             traceback.print_exc()
     
+    def change_guid(self):
+        """Change item GUID"""
+        if not self.current_item:
+            messagebox.showwarning("No File", "Please open a D2I file first")
+            return
+            
+        if not self.current_item.is_extended:
+            messagebox.showwarning("Not Extended", "Simple items do not have a GUID")
+            return
+            
+        from tkinter import simpledialog
+        
+        current_guid = self.current_item.guid
+        new_guid = simpledialog.askinteger(
+            "Change GUID", 
+            f"Current GUID: {current_guid}\nEnter new GUID (integer):",
+            parent=self.root,
+            initialvalue=current_guid,
+            minvalue=0,
+            maxvalue=0xFFFFFFFF
+        )
+        
+        if new_guid is not None:
+            try:
+                self.parser.change_guid(self.current_item, new_guid)
+                self.update_item_info()
+                messagebox.showinfo("Success", f"GUID changed to {new_guid}")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to change GUID:\n{str(e)}")
+
+    def change_unique_id(self):
+        """Change Set/Unique ID"""
+        if not self.current_item:
+            messagebox.showwarning("No File", "Please open a D2I file first")
+            return
+            
+        if not self.current_item.is_extended:
+            messagebox.showwarning("Not Extended", "Simple items do not have a Unique ID")
+            return
+            
+        if self.current_item.quality not in [ItemQuality.Set, ItemQuality.Unique]:
+            messagebox.showwarning("Invalid Quality", "Only Set or Unique items have a Unique ID")
+            return
+            
+        from tkinter import simpledialog
+        
+        current_id = self.current_item.set_or_unique_id
+        new_id = simpledialog.askinteger(
+            "Change Unique ID", 
+            f"Current ID: {current_id}\nEnter new ID (0-32767):",
+            parent=self.root,
+            initialvalue=current_id,
+            minvalue=0,
+            maxvalue=32767
+        )
+        
+        if new_id is not None:
+            try:
+                self.parser.change_unique_id(self.current_item, new_id)
+                self.update_item_info()
+                messagebox.showinfo("Success", f"Unique ID changed to {new_id}")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to change Unique ID:\n{str(e)}")
+
+    def toggle_ethereal(self):
+        """Toggle item ethereal status"""
+        if not self.current_item:
+            messagebox.showwarning("No File", "Please open a D2I file first")
+            return
+        
+        try:
+            new_ethereal_status = not self.current_item.is_ethereal
+            self.parser.change_ethereal(self.current_item, new_ethereal_status)
+            self.update_item_info()
+            status_text = "Ethereal" if new_ethereal_status else "Normal"
+            messagebox.showinfo("Success", f"Item is now {status_text}")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to toggle ethereal:\n{str(e)}")
+
     def save_file(self):
         """Save current file"""
         if not self.current_file:
@@ -489,8 +587,10 @@ class PropertyEditDialog:
     """Dialog for adding/editing a property"""
     
     def __init__(self, parent, property_db, skill_db, title="Edit Property",
-                 initial_prop_id=None, initial_value=0, initial_param=0):
+                 initial_prop_id=None, initial_value=0, initial_param=0, allow_multiple=False):
         self.result = None
+        self.results = []
+        self.allow_multiple = allow_multiple
         self.property_db = property_db
         self.skill_db = skill_db
         
@@ -559,16 +659,93 @@ class PropertyEditDialog:
         
         # Buttons
         button_frame = ttk.Frame(frame)
-        button_frame.grid(row=4, column=0, columnspan=2, pady=20)
+        button_frame.grid(row=4, column=0, columnspan=3, pady=20)
         
-        ttk.Button(button_frame, text="OK", command=self.ok).pack(side=tk.LEFT, padx=5)
+        if self.allow_multiple:
+            ttk.Button(button_frame, text="Add to List", command=self.add_to_list).pack(side=tk.LEFT, padx=5)
+            ttk.Button(button_frame, text="Finish", command=self.finish).pack(side=tk.LEFT, padx=5)
+        else:
+            ttk.Button(button_frame, text="OK", command=self.ok).pack(side=tk.LEFT, padx=5)
+            
         ttk.Button(button_frame, text="Cancel", command=self.cancel).pack(side=tk.LEFT, padx=5)
+        
+        if self.allow_multiple:
+            # List of added properties
+            list_frame = ttk.LabelFrame(frame, text="Properties to Add")
+            list_frame.grid(row=5, column=0, columnspan=3, sticky="nsew", pady=10)
+            
+            self.added_tree = ttk.Treeview(list_frame, columns=("ID", "Name", "Value", "Param"), show="headings", height=5)
+            self.added_tree.heading("ID", text="ID")
+            self.added_tree.heading("Name", text="Name")
+            self.added_tree.heading("Value", text="Value")
+            self.added_tree.heading("Param", text="Param")
+            
+            self.added_tree.column("ID", width=50)
+            self.added_tree.column("Name", width=200)
+            self.added_tree.column("Value", width=60)
+            self.added_tree.column("Param", width=60)
+            
+            scrollbar = ttk.Scrollbar(list_frame, orient="vertical", command=self.added_tree.yview)
+            self.added_tree.configure(yscrollcommand=scrollbar.set)
+            
+            self.added_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+            scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+            
+            # Resize dialog
+            self.dialog.geometry("600x500")
         
         frame.columnconfigure(1, weight=1)
         
         # Wait for dialog
         self.dialog.wait_window()
         
+    def add_to_list(self):
+        """Add current property to the list"""
+        try:
+            # Parse property ID from combo
+            prop_str = self.prop_var.get()
+            if ':' in prop_str:
+                prop_id = int(prop_str.split(':')[0])
+                prop_name = prop_str.split(':')[1].strip()
+            else:
+                raise ValueError("Please select a property")
+            
+            value = self.value_var.get()
+            param = self.param_var.get()
+            
+            # Add to results
+            self.results.append((prop_id, value, param))
+            
+            # Add to treeview
+            self.added_tree.insert("", "end", values=(prop_id, prop_name, value, param))
+            
+            # Clear inputs to indicate success
+            # self.value_var.set(0)
+            # self.param_var.set(0)
+            # self.prop_combo.set('')
+            
+        except Exception as e:
+            messagebox.showerror("Invalid Input", str(e), parent=self.dialog)
+
+    def finish(self):
+        """Finish adding properties"""
+        # If user has typed something but not added it to list, try to add it
+        # Only if list is empty OR if the input looks valid/intentional
+        # For now, let's just try to add if the list is empty, to support the "single add" workflow
+        if not self.results:
+             try:
+                 self.add_to_list()
+             except:
+                 pass 
+        
+        # If we have results, return them
+        if self.results:
+            self.result = self.results 
+            self.dialog.destroy()
+        else:
+            # If nothing in list and nothing valid in input, just close
+            self.dialog.destroy()
+
     def filter_properties(self, *args):
         keyword = self.filter_var.get().strip().lower()
         if keyword == "" or keyword == "filter...":
